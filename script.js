@@ -49,6 +49,7 @@ const PALETTE = [
 ============================================================ */
 let buques=[], cabos=[];
 let idCounter=0, caboCounter=0;
+const caboRowsOpen = new Set(); // IDs de buques con sub-fila de cabos abierta
 
 const $  = (s,r=document) => r.querySelector(s);
 const $$ = (s,r=document) => Array.from(r.querySelectorAll(s));
@@ -575,9 +576,6 @@ function actualizarTabla(){
     }
   });
 }
-
-// Track which cabo sub-rows are open
-const caboRowsOpen = new Set();
 
 // Delegación eventos tabla
 $('#tablaBody').addEventListener('click',e=>{
