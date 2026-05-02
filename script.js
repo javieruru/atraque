@@ -255,7 +255,8 @@ function agregarBuque(nombre,metros,manga,color,orientacion){
 ============================================================ */
 function guardarEstado(){
   localStorage.setItem('docksim_buques',JSON.stringify(buques.map(b=>({id:b.id,nombre:b.nombre,metros:b.metros,manga:b.manga,color:b.color,orientacion:b.orientacion,locked:b.locked,leftM:b.leftM}))));
-  localStorage.setItem('docksim_cabos', JSON.stringify(cabos.map(c=>({id:c.id,buqueId:c.buqueId,pctX:c.pctX,pctY:c.pctY,bitaNum:c.bitaNum}))));
+  // Solo guardar datos lógicos — las coords se recalculan desde escala al restaurar
+  localStorage.setItem('docksim_cabos',JSON.stringify(cabos.map(c=>({id:c.id,buqueId:c.buqueId,pctX:c.pctX,pctY:c.pctY,bitaNum:c.bitaNum}))));
   localStorage.setItem('docksim_counter',String(idCounter));
   localStorage.setItem('docksim_cabo_counter',String(caboCounter));
 }
@@ -278,21 +279,30 @@ function cargarEstado(){
     });
     actualizarTabla();
 
-    // Restaurar cabos DESPUÉS de que el layout esté completamente pintado
-    // Doble rAF garantiza que getBoundingClientRect() devuelva valores correctos
+    // Restaurar cabos — las coords se calculan desde escala (no dependen del layout)
     const rawC=localStorage.getItem('docksim_cabos'),cntC=localStorage.getItem('docksim_cabo_counter');
     if(rawC){
       const cd=JSON.parse(rawC);
       if(cntC) caboCounter=parseInt(cntC);
-      requestAnimationFrame(()=>{
-        requestAnimationFrame(()=>{
-          cd.forEach(c=>{
-            const o=buques.find(b=>b.id===c.buqueId);
-            if(o) crearCabo(o,c.pctX,c.pctY,c.bitaNum,c.id);
-          });
-          actualizarTabla(); // actualizar tabla con conteo de cabos
-        });
+      cd.forEach(c=>{
+        const o=buques.find(b=>b.id===c.buqueId);
+        if(!o) return;
+        const id=c.id;
+        const punto=document.createElement('div');
+        punto.className='punto-amarre'; punto.dataset.id=id;
+        punto.style.left=(c.pctX*100)+'%'; punto.style.top=(c.pctY*100)+'%';
+        o.el.appendChild(punto);
+        const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.classList.add('cabo-linea'); line.dataset.id=id;
+        svgCabos.appendChild(line);
+        const cabo={id,buqueId:o.id,pctX:c.pctX,pctY:c.pctY,bitaNum:c.bitaNum,puntoEl:punto,lineaEl:line};
+        cabos.push(cabo);
+        // Calcular línea directamente desde escala — siempre correcto
+        actualizarLineaCabo(cabo,o);
+        line.addEventListener('dblclick',()=>eliminarCabo(id));
+        punto.addEventListener('dblclick',ev=>{ev.stopPropagation();eliminarCabo(id);});
       });
+      actualizarTabla();
     }
   }catch(e){console.warn('Error:',e);actualizarTabla();}
 }
@@ -353,50 +363,57 @@ document.addEventListener('keyup',  e=>{if(e.key==='Control')document.body.class
 ============================================================ */
 const svgCabos=$('#svgCabos');
 
-/* Coordenadas SVG: usamos la zona-principal como origen único.
-   El SVG tiene inset:0 dentro de zona-principal, así que
-   coordenada SVG = coordenada relativa a zona-principal.
-   Calculamos TODO en metros/escala para evitar depender del layout
-   en el momento de la restauración. */
-
-function getZonaRef(){
-  return document.querySelector('.zona-principal').getBoundingClientRect();
+/* ----------------------------------------------------------------
+   Sistema de coordenadas SVG
+   El SVG tiene position:absolute; inset:0 dentro de .zona-principal.
+   Usamos SIEMPRE .zona-buques como referencia horizontal (mismo ancho
+   que el SVG) y calculamos Y desde datos conocidos (muelle-h en px).
+   Esto funciona tanto al crear como al restaurar desde localStorage.
+---------------------------------------------------------------- */
+function coordsBuque(obj, pctX, pctY){
+  const zona=$('#zonaBuques');
+  const escala=getEscala();
+  // X: posición izquierda del buque en px + porcentaje del ancho
+  const x=(obj.leftM||0)*escala + pctX*(obj.metros*escala);
+  // Y: el buque está pegado al fondo de zona-buques (bottom:0)
+  //    zona-buques ocupa toda la altura menos el muelle
+  const zonaH=zona.clientHeight;
+  const buqueH=Math.max(30, Math.round(obj.manga*escala));
+  const y=zonaH - buqueH + pctY*buqueH;
+  return {x, y};
 }
 
-function getBitaPos(bitaNum){
-  // Calculamos por escala directamente, sin depender del DOM de la bita
+function coordsBita(bitaNum){
   const bita=BITAS.find(b=>b.num===bitaNum);
   if(!bita) return null;
   const escala=getEscala();
-  const zonaR=getZonaRef();
-  const svgR=svgCabos.getBoundingClientRect();
-  // X: posición de la bita en metros * escala, relativo al SVG
-  const x=bita.pos*escala + (zonaR.left - svgR.left);
-  // Y: top del muelle + un poco adentro (donde está la cabeza)
-  const muelleSup=document.querySelector('.muelle-superficie');
-  const muelleR=muelleSup ? muelleSup.getBoundingClientRect() : null;
-  const y=muelleR ? (muelleR.top - svgR.top + 8) : (zonaR.height + 8);
+  const zona=$('#zonaBuques');
+  // X: posición de la bita en metros
+  const x=bita.pos*escala;
+  // Y: la bita está en el tope del muelle = fondo de zona-buques + un pequeño offset
+  const y=zona.clientHeight+12;
   return {x, y};
 }
 
-function getPuntoPos(obj,pctX,pctY){
-  // Calculamos por escala: left del buque en metros + pct del ancho
-  const escala=getEscala();
-  const svgR=svgCabos.getBoundingClientRect();
-  const zonaR=getZonaRef();
-  const buqueLeftPx=(obj.leftM||0)*escala;
-  const buqueW=obj.metros*escala;
-  const buqueH=Math.max(30,Math.round(obj.manga*escala));
-  // Y del buque: bottom=0 en zona-buques, que es zona-principal - muelle
-  const muelle=document.querySelector('.muelle');
-  const muelleH=muelle ? muelle.getBoundingClientRect().height : 140;
-  const zonaPH=zonaR.height; // altura total zona-principal
-  const buqueBottomY=zonaPH - muelleH; // donde termina el buque (pegado al muelle)
-  const buqueTopY=buqueBottomY - buqueH;
-  const x=(zonaR.left - svgR.left) + buqueLeftPx + pctX*buqueW;
-  const y=(zonaR.top  - svgR.top)  + buqueTopY   + pctY*buqueH;
-  return {x, y};
+// Para crear un cabo con Ctrl+clic necesitamos convertir
+// la posición del click (clientX/Y) a coordenadas de zona-buques
+function clientToZona(clientX, clientY){
+  const zona=$('#zonaBuques');
+  const r=zona.getBoundingClientRect();
+  return { x: clientX - r.left, y: clientY - r.top };
 }
+
+// pctX/pctY desde un click sobre el buque
+function clickToPct(obj, clientX, clientY){
+  const elR=obj.el.getBoundingClientRect();
+  return {
+    pctX: Math.max(0,Math.min(1,(clientX-elR.left)/elR.width)),
+    pctY: Math.max(0,Math.min(1,(clientY-elR.top)/elR.height))
+  };
+}
+
+function getBitaPos(bitaNum){ return coordsBita(bitaNum); }
+function getPuntoPos(obj,pctX,pctY){ return coordsBuque(obj,pctX,pctY); }
 
 function crearCabo(obj,pctX,pctY,bitaNum,idForzado){
   const id=idForzado!==undefined?idForzado:++caboCounter;
@@ -440,12 +457,15 @@ function eliminarCabo(caboId){
 let amarreEnCurso=null;
 function iniciarModoAmarre(obj,e){
   if(amarreEnCurso)cancelarAmarre();
-  const elR=obj.el.getBoundingClientRect();
-  const pctX=(e.clientX-elR.left)/elR.width,pctY=(e.clientY-elR.top)/elR.height;
+  // Calcular pctX/pctY desde el click sobre el buque
+  const pct=clickToPct(obj,e.clientX,e.clientY);
+  const pctX=pct.pctX, pctY=pct.pctY;
+  // Punto de inicio en coordenadas zona-buques
+  const p1=coordsBuque(obj,pctX,pctY);
   const lp=document.createElementNS('http://www.w3.org/2000/svg','line');
   lp.classList.add('cabo-preview'); svgCabos.appendChild(lp);
-  const svgR=getSVGRef(),p1x=e.clientX-svgR.left,p1y=e.clientY-svgR.top;
-  lp.setAttribute('x1',p1x); lp.setAttribute('y1',p1y); lp.setAttribute('x2',p1x); lp.setAttribute('y2',p1y);
+  lp.setAttribute('x1',p1.x); lp.setAttribute('y1',p1.y);
+  lp.setAttribute('x2',p1.x); lp.setAttribute('y2',p1.y);
   amarreEnCurso={obj,pctX,pctY,lineaPreview:lp};
   document.body.classList.add('amarre-activo');
   mostrarToast('🎯 Clic en una bita para amarrar · ESC cancela');
@@ -453,7 +473,13 @@ function iniciarModoAmarre(obj,e){
   document.addEventListener('click',onBitaClick,{capture:true});
   document.addEventListener('keydown',onEscAmarre);
 }
-function onPreviewMove(e){if(!amarreEnCurso)return;const svgR=getSVGRef();amarreEnCurso.lineaPreview.setAttribute('x2',e.clientX-svgR.left);amarreEnCurso.lineaPreview.setAttribute('y2',e.clientY-svgR.top);}
+function onPreviewMove(e){
+  if(!amarreEnCurso)return;
+  // Convertir posición del mouse a coordenadas zona-buques
+  const pos=clientToZona(e.clientX,e.clientY);
+  amarreEnCurso.lineaPreview.setAttribute('x2',pos.x);
+  amarreEnCurso.lineaPreview.setAttribute('y2',pos.y);
+}
 function onBitaClick(e){
   if(!amarreEnCurso)return;
   const bitaEl=e.target.closest('.bita');
