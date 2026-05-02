@@ -4,7 +4,7 @@
 'use strict';
 
 /* ============================================================
-   DATOS BITAS
+   DATOS
 ============================================================ */
 const MUELLE_METROS_TOTAL = 616.07;
 const SEPARACION_MIN_M    = 15;
@@ -47,151 +47,123 @@ const PALETTE = [
 /* ============================================================
    ESTADO
 ============================================================ */
-let buques = [], cabos = [];
-let idCounter = 0, caboCounter = 0;
+let buques=[], cabos=[];
+let idCounter=0, caboCounter=0;
 
 const $  = (s,r=document) => r.querySelector(s);
 const $$ = (s,r=document) => Array.from(r.querySelectorAll(s));
 
-function getEscala() { return $('#zonaBuques').clientWidth / MUELLE_METROS_TOTAL; }
+function getEscala(){ return $('#zonaBuques').clientWidth / MUELLE_METROS_TOTAL; }
 
-function mangaPorDefecto(metros) {
-  metros = parseFloat(metros)||0;
-  if (metros <= 120) return 25;
-  if (metros <= 200) return 30;
+function mangaPorDefecto(m){
+  m=parseFloat(m)||0;
+  if(m<=120) return 25;
+  if(m<=200) return 30;
   return 35;
 }
 
 /* ============================================================
-   BITAS — render
+   BITAS
 ============================================================ */
-function generarBitas() {
-  const cont = $('#bitasContenedor');
-  if (!cont) return;
-  cont.innerHTML = '';
-  const escala = getEscala();
-  BITAS.forEach(b => {
-    const cls = b.cap===250?'bita-250':b.cap===150?'bita-150':'bita-55';
-    const div = document.createElement('div');
-    div.className = `bita ${cls}`;
-    div.dataset.num = String(b.num);
-    div.dataset.pos = String(b.pos);
-    div.dataset.cap = String(b.cap);
-    div.style.left  = (b.pos * escala) + 'px';
-    div.innerHTML = `<div class="bita-palo"></div><div class="bita-cabeza"></div><div class="bita-label">${b.num}</div>`;
-    // Hover → panel info flotante
-    div.addEventListener('mouseenter', () => mostrarInfoBita(b));
-    div.addEventListener('mouseleave', () => ocultarInfoPanel());
+function generarBitas(){
+  const cont=$('#bitasContenedor');
+  if(!cont) return;
+  cont.innerHTML='';
+  const escala=getEscala();
+  BITAS.forEach(b=>{
+    const cls=b.cap===250?'bita-250':b.cap===150?'bita-150':'bita-55';
+    const div=document.createElement('div');
+    div.className=`bita ${cls}`;
+    div.dataset.num=String(b.num);
+    div.dataset.pos=String(b.pos);
+    div.dataset.cap=String(b.cap);
+    div.style.left=(b.pos*escala)+'px';
+    div.innerHTML=`<div class="bita-palo"></div><div class="bita-cabeza"></div><div class="bita-label">${b.num}</div>`;
+    div.addEventListener('mouseenter',()=>mostrarInfoBita(b));
+    div.addEventListener('mouseleave',ocultarInfoPanel);
     cont.appendChild(div);
   });
 }
 
-function calcularBitas(obj) {
-  const inicioPx = parseFloat(obj.el.style.left);
-  const finPx    = inicioPx + obj.el.offsetWidth;
-  const domB     = $$('.bita').map(b=>({num:b.dataset.num, x:b.offsetLeft}));
-  let desde='–', hasta='–';
-  for (let i=0;i<domB.length;i++) { if(domB[i].x>=inicioPx){desde=domB[i].num;break;} }
-  for (let i=domB.length-1;i>=0;i--) { if(domB[i].x<=finPx){hasta=domB[i].num;break;} }
+function calcularBitas(obj){
+  const ini=parseFloat(obj.el.style.left), fin=ini+obj.el.offsetWidth;
+  const domB=$$('.bita').map(b=>({num:b.dataset.num,x:b.offsetLeft}));
+  let desde='–',hasta='–';
+  for(let i=0;i<domB.length;i++){if(domB[i].x>=ini){desde=domB[i].num;break;}}
+  for(let i=domB.length-1;i>=0;i--){if(domB[i].x<=fin){hasta=domB[i].num;break;}}
   obj.bitaDesde=desde; obj.bitaHasta=hasta;
 }
 
 /* ============================================================
-   PANEL INFO FLOTANTE — buques y bitas
+   PANEL INFO FLOTANTE
 ============================================================ */
-const panelIF    = $('#panelInfoFlotante');
-const pifTitulo  = $('#pifTitulo');
-const pifIcon    = $('#pifIcon');
-const pifBody    = $('#pifBody');
-let   pifTimer   = null;
+const panelIF=$('#panelInfoFlotante');
+const pifTitulo=$('#pifTitulo');
+const pifIcon=$('#pifIcon');
+const pifBody=$('#pifBody');
+let pifTimer=null;
 
-function mostrarInfoBuque(obj) {
+function mostrarInfoBuque(obj){
   clearTimeout(pifTimer);
-  pifIcon.textContent  = '🚢';
-  pifTitulo.textContent = obj.nombre;
-
-  const misCabos = cabos.filter(c => c.buqueId === obj.id);
-  const cabosStr = misCabos.length === 0
-    ? 'Sin cabos'
-    : misCabos.map(c => {
-        const zona = c.pctX < 0.3
-          ? (obj.orientacion==='babor'?'Popa':'Proa')
-          : c.pctX > 0.7 ? (obj.orientacion==='babor'?'Proa':'Popa') : 'Centro';
-        return `${zona} → Bita ${c.bitaNum}`;
-      }).join('<br>');
-
-  pifBody.innerHTML = `
+  pifIcon.textContent='🚢';
+  pifTitulo.textContent=obj.nombre;
+  const misCabos=cabos.filter(c=>c.buqueId===obj.id);
+  const cabosStr=misCabos.length===0?'Sin cabos':misCabos.map(c=>{
+    const z=c.pctX<0.3?(obj.orientacion==='babor'?'Popa':'Proa'):c.pctX>0.7?(obj.orientacion==='babor'?'Proa':'Popa'):'Centro';
+    return `${z} → Bita ${c.bitaNum}`;
+  }).join('<br>');
+  pifBody.innerHTML=`
     <div class="pif-row"><span class="pif-label">Eslora</span><span class="pif-value">${obj.metros} m</span></div>
     <div class="pif-row"><span class="pif-label">Manga</span><span class="pif-value">${obj.manga} m</span></div>
     <div class="pif-row"><span class="pif-label">Banda</span><span class="pif-value">${obj.orientacion.charAt(0).toUpperCase()+obj.orientacion.slice(1)}</span></div>
     <div class="pif-row"><span class="pif-label">Bitas</span><span class="pif-value highlight">${obj.bitaDesde} → ${obj.bitaHasta}</span></div>
     <div class="pif-row"><span class="pif-label">Estado</span><span class="pif-value ${obj.locked?'warn':''}">${obj.locked?'🔒 Bloqueado':'🔓 Libre'}</span></div>
     <div class="pif-divider"></div>
-    <div class="pif-row"><span class="pif-label">Cabos</span><span class="pif-value" style="font-size:10px;line-height:1.5">${cabosStr}</span></div>
-    <div class="pif-hint">Doble clic para editar · Ctrl+clic para amarrar</div>
-  `;
+    <div class="pif-row"><span class="pif-label">Cabos</span><span class="pif-value" style="font-size:10px;line-height:1.6">${cabosStr}</span></div>
+    <div class="pif-hint">Doble clic = editar · Ctrl+clic = amarrar</div>`;
   panelIF.classList.add('visible');
 }
 
-function mostrarInfoBita(b) {
+function mostrarInfoBita(b){
   clearTimeout(pifTimer);
-  const tipo = b.cap===250 ? 'Reforzada' : b.cap===150 ? 'Estándar' : 'Liviana';
-  const color = b.cap===250 ? '#a02020' : b.cap===150 ? '#555' : '#999';
-
-  // Distancia al siguiente
-  const idx = TRAMOS.findIndex(t => t.desde === b.num);
-  const distSig = idx >= 0 && TRAMOS[idx+1] ? TRAMOS[idx].dist + ' m → ' + TRAMOS[idx+1].dist + ' m' : '—';
-
-  // Cabos amarrados a esta bita
-  const cabosBita = cabos.filter(c => c.bitaNum === b.num);
-  const cabosBitaStr = cabosBita.length === 0
-    ? 'Sin cabos'
-    : cabosBita.map(c => {
-        const buq = buques.find(b2=>b2.id===c.buqueId);
-        return buq ? buq.nombre : '?';
-      }).join(', ');
-
-  pifIcon.textContent   = '⚓';
-  pifTitulo.textContent = `Bita ${b.num}`;
-  pifBody.innerHTML = `
+  const tipo=b.cap===250?'Reforzada':b.cap===150?'Estándar':'Liviana';
+  const color=b.cap===250?'#a02020':b.cap===150?'#555':'#999';
+  const cabosBita=cabos.filter(c=>c.bitaNum===b.num);
+  const str=cabosBita.length===0?'Sin cabos':cabosBita.map(c=>{const bq=buques.find(b2=>b2.id===c.buqueId);return bq?bq.nombre:'?';}).join(', ');
+  pifIcon.textContent='⚓';
+  pifTitulo.textContent=`Bita ${b.num}`;
+  pifBody.innerHTML=`
     <div class="pif-row"><span class="pif-label">Posición</span><span class="pif-value">${b.pos.toFixed(2)} m</span></div>
     <div class="pif-row"><span class="pif-label">Tipo</span><span class="pif-value" style="color:${color}">${tipo}</span></div>
     <div class="pif-row"><span class="pif-label">Capacidad</span><span class="pif-value" style="color:${color}">${b.cap} t</span></div>
     <div class="pif-divider"></div>
-    <div class="pif-row"><span class="pif-label">Cabos</span><span class="pif-value" style="font-size:10px">${cabosBitaStr}</span></div>
-  `;
+    <div class="pif-row"><span class="pif-label">Cabos</span><span class="pif-value" style="font-size:10px">${str}</span></div>`;
   panelIF.classList.add('visible');
 }
 
-function ocultarInfoPanel() {
-  pifTimer = setTimeout(() => panelIF.classList.remove('visible'), 120);
-}
-
-// Mantener panel visible al hacer hover sobre él mismo
-panelIF.addEventListener('mouseenter', () => clearTimeout(pifTimer));
-panelIF.addEventListener('mouseleave', ocultarInfoPanel);
+function ocultarInfoPanel(){ pifTimer=setTimeout(()=>panelIF.classList.remove('visible'),120); }
+panelIF.addEventListener('mouseenter',()=>clearTimeout(pifTimer));
+panelIF.addEventListener('mouseleave',ocultarInfoPanel);
 
 /* ============================================================
-   PANEL INFO BITAS (modal con tabla completa)
+   PANEL INFO BITAS (modal)
 ============================================================ */
-function buildTablaInfoBitas() {
-  const tbody = $('#tablaInfoBody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  const distSig = {};
-  for (let i=0;i<TRAMOS.length-1;i++) {
-    if(TRAMOS[i].hasta!=='Borde') distSig[TRAMOS[i].hasta]=TRAMOS[i+1].dist;
-  }
-  BITAS.forEach(b => {
-    const cls = b.cap===250?'250':b.cap===150?'150':'55';
-    const sig = distSig[b.num]!==undefined ? distSig[b.num].toFixed(2)+' m' : '—';
-    const tr  = document.createElement('tr');
-    tr.innerHTML = `<td class="bita-num-cell bita-num-${cls}">${b.num}</td><td>${b.pos.toFixed(3)} m</td><td>${sig}</td><td><span class="cap-badge cap-${cls}">${b.cap} t</span></td>`;
+function buildTablaInfoBitas(){
+  const tbody=$('#tablaInfoBody');
+  if(!tbody) return;
+  tbody.innerHTML='';
+  const ds={};
+  for(let i=0;i<TRAMOS.length-1;i++){if(TRAMOS[i].hasta!=='Borde')ds[TRAMOS[i].hasta]=TRAMOS[i+1].dist;}
+  BITAS.forEach(b=>{
+    const cls=b.cap===250?'250':b.cap===150?'150':'55';
+    const sig=ds[b.num]!==undefined?ds[b.num].toFixed(2)+' m':'—';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="bita-num-cell bita-num-${cls}">${b.num}</td><td>${b.pos.toFixed(3)} m</td><td>${sig}</td><td><span class="cap-badge cap-${cls}">${b.cap} t</span></td>`;
     tbody.appendChild(tr);
   });
 }
 
-(function initPanelInfoModal() {
+(function initPanelInfoModal(){
   const btn=$('#btnInfoBitas'),panel=$('#panelInfoBitas'),overlay=$('#overlayInfo'),close=$('#closeInfoBitas');
   buildTablaInfoBitas();
   function abrir(){overlay.style.display='block';panel.style.display='block';requestAnimationFrame(()=>{overlay.classList.add('visible');panel.classList.add('visible');});}
@@ -212,18 +184,14 @@ function darken(hex,amt){const r=Math.max(0,parseInt(hex.slice(1,3),16)-amt),g=M
 /* ============================================================
    COLISIONES
 ============================================================ */
-function hayColision(x,ancho,excluirId){
+function hayColision(x,ancho,excId){
   const sep=SEPARACION_MIN_M*getEscala();
-  for(const b of buques){
-    if(b.id===excluirId)continue;
-    const bx=parseFloat(b.el.style.left),bw=b.el.offsetWidth;
-    if(x<bx+bw+sep&&x+ancho+sep>bx)return true;
-  }
+  for(const b of buques){if(b.id===excId)continue;const bx=parseFloat(b.el.style.left),bw=b.el.offsetWidth;if(x<bx+bw+sep&&x+ancho+sep>bx)return true;}
   return false;
 }
 function encontrarHueco(metros){
-  const escala=getEscala(),anchoPx=metros*escala,margenPx=MARGEN_BORDE_M*escala,totalW=$('#zonaBuques').clientWidth;
-  for(let c=margenPx;c<=totalW-margenPx-anchoPx;c+=2){if(!hayColision(c,anchoPx,null))return c;}
+  const escala=getEscala(),ap=metros*escala,mp=MARGEN_BORDE_M*escala,tw=$('#zonaBuques').clientWidth;
+  for(let c=mp;c<=tw-mp-ap;c+=2){if(!hayColision(c,ap,null))return c;}
   return null;
 }
 
@@ -231,9 +199,10 @@ function encontrarHueco(metros){
    HTML BUQUE
 ============================================================ */
 function buildCasillas(){
-  const cs=['rgba(0,0,0,.22)','rgba(0,0,0,.14)','rgba(255,255,255,.13)','rgba(0,0,0,.18)','rgba(255,255,255,.07)','rgba(0,0,0,.20)'];
-  return cs.map(c=>`<div class="casilla" style="background:${c}"></div>`).join('');
+  return ['rgba(0,0,0,.22)','rgba(0,0,0,.14)','rgba(255,255,255,.13)','rgba(0,0,0,.18)','rgba(255,255,255,.07)','rgba(0,0,0,.20)']
+    .map(c=>`<div class="casilla" style="background:${c}"></div>`).join('');
 }
+
 function buqueHTML(info){
   const grad=`linear-gradient(160deg,${info.color} 0%,${darken(info.color,22)} 100%)`;
   return `
@@ -254,11 +223,12 @@ function buqueHTML(info){
       </div>
     </div>`;
 }
+
 function crearBuqueEl(info){
-  const escala=getEscala(),anchoPx=info.metros*escala,altoPx=Math.max(30,Math.round(info.manga*escala));
+  const escala=getEscala(),ap=info.metros*escala,alt=Math.max(30,Math.round(info.manga*escala));
   const el=document.createElement('div');
   el.className=`buque${info.orientacion==='babor'?' babor':''} entrando`;
-  el.style.width=anchoPx+'px'; el.style.height=altoPx+'px'; el.style.left=info.x+'px';
+  el.style.width=ap+'px'; el.style.height=alt+'px'; el.style.left=info.x+'px';
   el.dataset.id=info.id;
   el.innerHTML=buqueHTML(info);
   el.addEventListener('animationend',()=>el.classList.remove('entrando'),{once:true});
@@ -272,19 +242,15 @@ function agregarBuque(nombre,metros,manga,color,orientacion){
   metros=parseFloat(metros); manga=parseFloat(manga);
   if(!nombre||isNaN(metros)||metros<70||isNaN(manga)||manga<8){mostrarToast('⚠ Datos inválidos');return false;}
   const xPx=encontrarHueco(metros);
-  if(xPx===null){mostrarToast('⚠ No hay espacio libre en el muelle');return false;}
+  if(xPx===null){mostrarToast('⚠ No hay espacio libre');return false;}
   const id=++idCounter;
   const info={id,nombre:nombre.toUpperCase(),metros,manga,color,orientacion,x:xPx};
   const el=crearBuqueEl(info);
   const obj={id,nombre:info.nombre,metros,manga,color,orientacion,locked:false,el,bitaDesde:'–',bitaHasta:'–',leftM:xPx/getEscala()};
   buques.push(obj);
   $('#zonaBuques').appendChild(el);
-  calcularBitas(obj);
-  iniciarDrag(obj);
-  iniciarHoverInfo(obj);
-  iniciarPanelCabos(obj);
-  actualizarTabla();
-  guardarEstado();
+  calcularBitas(obj); iniciarDrag(obj); iniciarHoverInfo(obj); iniciarPanelCabos(obj);
+  actualizarTabla(); guardarEstado();
   mostrarToast(`✓ ${info.nombre} agregado`);
   return true;
 }
@@ -298,6 +264,7 @@ function guardarEstado(){
   localStorage.setItem('docksim_counter',String(idCounter));
   localStorage.setItem('docksim_cabo_counter',String(caboCounter));
 }
+
 function cargarEstado(){
   try{
     const raw=localStorage.getItem('docksim_buques'),cnt=localStorage.getItem('docksim_counter');
@@ -305,9 +272,9 @@ function cargarEstado(){
     const data=JSON.parse(raw);
     if(cnt)idCounter=parseInt(cnt);
     data.forEach(d=>{
-      const escala=getEscala(),altoPx=Math.max(30,Math.round((d.manga||35)*escala)),xPx=(d.leftM||0)*escala;
+      const escala=getEscala(),alt=Math.max(30,Math.round((d.manga||35)*escala)),xPx=(d.leftM||0)*escala;
       const info={...d,manga:d.manga||35,x:xPx};
-      const el=crearBuqueEl(info); el.style.height=altoPx+'px';
+      const el=crearBuqueEl(info); el.style.height=alt+'px';
       const obj={...info,el,bitaDesde:'–',bitaHasta:'–'};
       buques.push(obj);
       $('#zonaBuques').appendChild(el);
@@ -344,8 +311,8 @@ function iniciarDrag(obj){
 
   function mover(cx){
     if(!arras)return;
-    const escala=getEscala(),margenPx=MARGEN_BORDE_M*escala,zona=$('#zonaBuques');
-    let newX=Math.max(margenPx,Math.min(startL+(cx-startX),zona.clientWidth-margenPx-el.offsetWidth));
+    const escala=getEscala(),mp=MARGEN_BORDE_M*escala,zona=$('#zonaBuques');
+    let newX=Math.max(mp,Math.min(startL+(cx-startX),zona.clientWidth-mp-el.offsetWidth));
     if(!hayColision(newX,el.offsetWidth,obj.id)){
       el.style.left=newX+'px'; obj.leftM=newX/escala;
       calcularBitas(obj); actualizarCabosBuque(obj); actualizarTabla();
@@ -359,12 +326,9 @@ function iniciarDrag(obj){
   el.addEventListener('click',e=>{if(!e.ctrlKey)return;e.preventDefault();e.stopPropagation();iniciarModoAmarre(obj,e);});
 }
 
-/* ============================================================
-   HOVER INFO (buques)
-============================================================ */
 function iniciarHoverInfo(obj){
   const el=obj.el;
-  el.addEventListener('mouseenter',()=>{ clearTimeout(pifTimer); mostrarInfoBuque(obj); });
+  el.addEventListener('mouseenter',()=>{clearTimeout(pifTimer);mostrarInfoBuque(obj);});
   el.addEventListener('mouseleave',ocultarInfoPanel);
 }
 
@@ -375,15 +339,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Control')document.body.class
 document.addEventListener('keyup',  e=>{if(e.key==='Control')document.body.classList.remove('ctrl-mode');});
 
 /* ============================================================
-   SISTEMA DE CABOS (SVG)
+   SISTEMA CABOS (SVG)
 ============================================================ */
 const svgCabos=$('#svgCabos');
-
 function getSVGRef(){return $('#svgCabos').getBoundingClientRect();}
 function getBitaPos(bitaNum){
   const bitaEl=$(`.bita[data-num="${bitaNum}"]`);
   if(!bitaEl)return null;
-  const svgR=getSVGRef(),cabEl=bitaEl.querySelector('.bita-cabeza'),ref=cabEl||bitaEl,refR=ref.getBoundingClientRect();
+  const svgR=getSVGRef(),ref=bitaEl.querySelector('.bita-cabeza')||bitaEl,refR=ref.getBoundingClientRect();
   return{x:refR.left-svgR.left+refR.width/2,y:refR.top-svgR.top+refR.height/2};
 }
 function getPuntoPos(obj,pctX,pctY){
@@ -430,7 +393,6 @@ function eliminarCabo(caboId){
   actualizarTabla(); guardarEstado();
 }
 
-/* Modo amarre */
 let amarreEnCurso=null;
 function iniciarModoAmarre(obj,e){
   if(amarreEnCurso)cancelarAmarre();
@@ -447,19 +409,13 @@ function iniciarModoAmarre(obj,e){
   document.addEventListener('click',onBitaClick,{capture:true});
   document.addEventListener('keydown',onEscAmarre);
 }
-function onPreviewMove(e){
-  if(!amarreEnCurso)return;
-  const svgR=getSVGRef();
-  amarreEnCurso.lineaPreview.setAttribute('x2',e.clientX-svgR.left);
-  amarreEnCurso.lineaPreview.setAttribute('y2',e.clientY-svgR.top);
-}
+function onPreviewMove(e){if(!amarreEnCurso)return;const svgR=getSVGRef();amarreEnCurso.lineaPreview.setAttribute('x2',e.clientX-svgR.left);amarreEnCurso.lineaPreview.setAttribute('y2',e.clientY-svgR.top);}
 function onBitaClick(e){
   if(!amarreEnCurso)return;
   const bitaEl=e.target.closest('.bita');
   if(!bitaEl)return;
   e.stopPropagation(); e.preventDefault();
-  const{obj,pctX,pctY}=amarreEnCurso;
-  const bitaNum=parseInt(bitaEl.dataset.num);
+  const{obj,pctX,pctY}=amarreEnCurso,bitaNum=parseInt(bitaEl.dataset.num);
   cancelarAmarre();
   crearCabo(obj,pctX,pctY,bitaNum);
   guardarEstado();
@@ -477,7 +433,7 @@ function cancelarAmarre(){
 }
 
 /* ============================================================
-   PANEL CABOS EN EL BUQUE (div interno)
+   PANEL CABOS EN BUQUE
 ============================================================ */
 function iniciarPanelCabos(obj){
   obj.el.addEventListener('click',e=>{
@@ -486,8 +442,7 @@ function iniciarPanelCabos(obj){
     const body=$(`#pcb-body-${obj.id}`);
     if(!body)return;
     const col=body.style.display==='none';
-    body.style.display=col?'':'none';
-    btn.textContent=col?'▼':'▲';
+    body.style.display=col?'':'none'; btn.textContent=col?'▼':'▲';
   });
   obj.el.addEventListener('click',e=>{
     const btn=e.target.closest('.pcb-cabo-eliminar');
@@ -495,6 +450,7 @@ function iniciarPanelCabos(obj){
     eliminarCabo(parseInt(btn.dataset.cabo));
   });
 }
+
 function actualizarPanelCabosBuque(obj){
   const panel=$(`#pcb-${obj.id}`),body=$(`#pcb-body-${obj.id}`),emptyEl=$(`#pcb-empty-${obj.id}`);
   if(!panel||!body)return;
@@ -505,14 +461,14 @@ function actualizarPanelCabosBuque(obj){
   if(emptyEl)emptyEl.style.display='none';
   misCabos.forEach(c=>{
     const div=document.createElement('div'); div.className='pcb-cabo-item';
-    const zona=c.pctX<0.3?(obj.orientacion==='babor'?'Popa':'Proa'):c.pctX>0.7?(obj.orientacion==='babor'?'Proa':'Popa'):'Centro';
-    div.innerHTML=`<div class="pcb-cabo-info"><div class="pcb-cabo-dot"></div><span>${zona} → Bita ${c.bitaNum}</span></div><button class="pcb-cabo-eliminar" data-cabo="${c.id}" title="Eliminar cabo">✕</button>`;
+    const z=c.pctX<0.3?(obj.orientacion==='babor'?'Popa':'Proa'):c.pctX>0.7?(obj.orientacion==='babor'?'Proa':'Popa'):'Centro';
+    div.innerHTML=`<div class="pcb-cabo-info"><div class="pcb-cabo-dot"></div><span>${z} → Bita ${c.bitaNum}</span></div><button class="pcb-cabo-eliminar" data-cabo="${c.id}">✕</button>`;
     body.appendChild(div);
   });
 }
 
 /* ============================================================
-   TABLA FLOTANTE BUQUES (con sub-fila de cabos)
+   TABLA FLOTANTE BUQUES
 ============================================================ */
 function actualizarTabla(){
   const tbody=$('#tablaBody'),emptyEl=$('#panelEmpty'),tablaEl=$('#tablaBuques');
@@ -526,6 +482,7 @@ function actualizarTabla(){
 
     // Fila principal
     const tr=document.createElement('tr');
+    tr.className='fila-buque';
     tr.innerHTML=`
       <td><span class="color-dot" style="background:${obj.color}"></span></td>
       <td style="font-weight:700">${obj.nombre}</td>
@@ -534,53 +491,56 @@ function actualizarTabla(){
       <td>${obj.manga} m</td>
       <td>${obj.bitaDesde} → ${obj.bitaHasta}</td>
       <td><button class="lock-btn-table" data-id="${obj.id}">${obj.locked?'🔒':'🔓'}</button></td>
-      <td><button class="btn-toggle-cabos" data-id="${obj.id}" title="Ver cabos">⚓${misCabos.length>0?` <span style="color:#ff6600;font-weight:700">${misCabos.length}</span>`:''}</button></td>
-    `;
+      <td>
+        <button class="btn-toggle-cabos" data-id="${obj.id}">
+          ⚓${misCabos.length>0?` <span class="cabo-count">${misCabos.length}</span>`:''}
+        </button>
+      </td>`;
     tbody.appendChild(tr);
 
-    // Sub-fila cabos (oculta por defecto)
+    // Sub-fila cabos — siempre presente pero oculta por defecto
     const trCabos=document.createElement('tr');
-    trCabos.className='tabla-cabos-row';
+    trCabos.className='fila-cabos-wrap';
     trCabos.id=`tcr-${obj.id}`;
     trCabos.style.display='none';
     const tdCabos=document.createElement('td');
     tdCabos.colSpan=8;
+    const inner=document.createElement('div');
+    inner.className='fila-cabos-inner';
 
     if(misCabos.length===0){
-      tdCabos.innerHTML='<div class="tabla-cabos-inner"><span class="tcr-empty">Sin cabos amarrados</span></div>';
+      inner.innerHTML='<span class="tcr-empty">Sin cabos amarrados</span>';
     } else {
-      const items=misCabos.map(c=>{
-        const zona=c.pctX<0.3?(obj.orientacion==='babor'?'Popa':'Proa'):c.pctX>0.7?(obj.orientacion==='babor'?'Proa':'Popa'):'Centro';
-        return `<div class="tcr-item"><div class="tcr-dot"></div><span>${zona} → Bita ${c.bitaNum}</span><button class="tcr-eliminar" data-cabo="${c.id}" title="Eliminar cabo">✕</button></div>`;
-      }).join('');
-      tdCabos.innerHTML=`<div class="tabla-cabos-inner">${items}</div>`;
+      misCabos.forEach(c=>{
+        const z=c.pctX<0.3?(obj.orientacion==='babor'?'Popa':'Proa'):c.pctX>0.7?(obj.orientacion==='babor'?'Proa':'Popa'):'Centro';
+        const item=document.createElement('div'); item.className='tcr-item';
+        item.innerHTML=`<div class="tcr-dot"></div><span>${z} → Bita ${c.bitaNum}</span><button class="tcr-eliminar" data-cabo="${c.id}">✕</button>`;
+        inner.appendChild(item);
+      });
     }
-
+    tdCabos.appendChild(inner);
     trCabos.appendChild(tdCabos);
     tbody.appendChild(trCabos);
   });
 }
 
-// Delegación de eventos en tabla
+// Delegación eventos tabla
 $('#tablaBody').addEventListener('click',e=>{
-  // Lock
   const lockBtn=e.target.closest('.lock-btn-table');
   if(lockBtn){
     const obj=buques.find(b=>b.id===parseInt(lockBtn.dataset.id));
-    if(obj){obj.locked=!obj.locked;obj.el.classList.toggle('locked',obj.locked);actualizarTabla();guardarEstado();mostrarToast(obj.locked?`🔒 ${obj.nombre} bloqueado`:`🔓 ${obj.nombre} desbloqueado`);}
+    if(obj){obj.locked=!obj.locked;obj.el.classList.toggle('locked',obj.locked);actualizarTabla();guardarEstado();mostrarToast(obj.locked?`🔒 ${obj.nombre}`:`🔓 ${obj.nombre}`);}
     return;
   }
-  // Toggle cabos sub-fila
   const caboToggle=e.target.closest('.btn-toggle-cabos');
   if(caboToggle){
     const id=parseInt(caboToggle.dataset.id);
-    const trCabos=$(`#tcr-${id}`);
-    if(trCabos)trCabos.style.display=trCabos.style.display==='none'?'':'none';
+    const tr=$(`#tcr-${id}`);
+    if(tr)tr.style.display=tr.style.display==='none'?'':'none';
     return;
   }
-  // Eliminar cabo desde tabla
   const elim=e.target.closest('.tcr-eliminar');
-  if(elim){eliminarCabo(parseInt(elim.dataset.cabo));return;}
+  if(elim){eliminarCabo(parseInt(elim.dataset.cabo));}
 });
 
 /* ============================================================
@@ -596,22 +556,20 @@ $('#tablaBody').addEventListener('click',e=>{
    MODAL AGREGAR
 ============================================================ */
 (function initModalAgregar(){
-  const overlay=$('#overlayAgregar'),modal=$('#modalAgregar'),segBanda=$('#seg-banda'),swatchesEl=$('#colorSwatches');
+  const overlay=$('#overlayAgregar'),modal=$('#modalAgregar'),segBanda=$('#seg-banda'),swEl=$('#colorSwatches');
   let bandaVal='estribor',mangaTocada=false;
 
   PALETTE.forEach(c=>{
-    const s=document.createElement('div'); s.className='swatch'; s.style.background=c; s.title=c;
-    s.addEventListener('click',()=>{$('#inp-color').value=c;$$('.swatch',swatchesEl).forEach(x=>x.classList.remove('selected'));s.classList.add('selected');});
-    swatchesEl.appendChild(s);
+    const s=document.createElement('div'); s.className='swatch'; s.style.background=c;
+    s.addEventListener('click',()=>{$('#inp-color').value=c;$$('.swatch',swEl).forEach(x=>x.classList.remove('selected'));s.classList.add('selected');});
+    swEl.appendChild(s);
   });
 
-  function colorRandom(){$('#inp-color').value=randomPastel();$$('.swatch',swatchesEl).forEach(x=>x.classList.remove('selected'));}
+  function colorRandom(){$('#inp-color').value=randomPastel();$$('.swatch',swEl).forEach(x=>x.classList.remove('selected'));}
   $('#btnRandomColor').addEventListener('click',colorRandom);
-
   segBanda.querySelectorAll('.seg-btn').forEach(btn=>btn.addEventListener('click',()=>{segBanda.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');bandaVal=btn.dataset.val;}));
-
   $('#inp-manga').addEventListener('input',()=>{mangaTocada=true;});
-  $('#inp-metros').addEventListener('input',()=>{if(!mangaTocada&&$('#inp-metros').value){$('#inp-manga').value=mangaPorDefecto($('#inp-metros').value);}});
+  $('#inp-metros').addEventListener('input',()=>{if(!mangaTocada&&$('#inp-metros').value)$('#inp-manga').value=mangaPorDefecto($('#inp-metros').value);});
 
   function abrir(){
     $('#inp-nombre').value='';$('#inp-metros').value='';$('#inp-manga').value='';
@@ -627,7 +585,6 @@ $('#tablaBody').addEventListener('click',e=>{
   $('#closeAgregar').addEventListener('click',cerrar);
   $('#cancelAgregar').addEventListener('click',cerrar);
   overlay.addEventListener('click',cerrar);
-
   $('#confirmAgregar').addEventListener('click',()=>{
     const nombre=$('#inp-nombre').value.trim(),metros=$('#inp-metros').value,manga=$('#inp-manga').value,color=$('#inp-color').value;
     if(!nombre){$('#inp-nombre').focus();mostrarToast('⚠ Ingresá el nombre');return;}
@@ -635,7 +592,6 @@ $('#tablaBody').addEventListener('click',e=>{
     if(!manga||parseFloat(manga)<8){$('#inp-manga').focus();mostrarToast('⚠ Manga mínima 8 m');return;}
     if(agregarBuque(nombre,metros,manga,color,bandaVal))cerrar();
   });
-
   [$('#inp-nombre'),$('#inp-metros'),$('#inp-manga')].forEach(inp=>inp?.addEventListener('keydown',e=>{if(e.key==='Enter')$('#confirmAgregar').click();}));
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('visible'))cerrar();});
 })();
@@ -647,7 +603,7 @@ let objEditando=null;
 function abrirModalEditar(obj){
   objEditando=obj;
   const overlay=$('#overlayEditar'),modal=$('#modalEditar'),segBanda=$('#seg-edit-banda');
-  $('#edit-nombre').value=obj.nombre; $('#edit-metros').value=obj.metros; $('#edit-manga').value=obj.manga; $('#edit-color').value=obj.color;
+  $('#edit-nombre').value=obj.nombre;$('#edit-metros').value=obj.metros;$('#edit-manga').value=obj.manga;$('#edit-color').value=obj.color;
   segBanda.querySelectorAll('.seg-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.val===obj.orientacion));
   overlay.style.display='block';modal.style.display='block';
   requestAnimationFrame(()=>{overlay.classList.add('visible');modal.classList.add('visible');});
@@ -656,41 +612,38 @@ function abrirModalEditar(obj){
   const overlay=$('#overlayEditar'),modal=$('#modalEditar'),segBanda=$('#seg-edit-banda');
   segBanda.querySelectorAll('.seg-btn').forEach(btn=>btn.addEventListener('click',()=>{segBanda.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}));
   $('#editBtnRandom').addEventListener('click',()=>{$('#edit-color').value=randomPastel();});
-
   function cerrar(){overlay.classList.remove('visible');modal.classList.remove('visible');setTimeout(()=>{overlay.style.display='none';modal.style.display='none';},230);objEditando=null;}
-  $('#closeEditar').addEventListener('click',cerrar); $('#cancelEditar').addEventListener('click',cerrar); overlay.addEventListener('click',cerrar);
-
+  $('#closeEditar').addEventListener('click',cerrar);$('#cancelEditar').addEventListener('click',cerrar);overlay.addEventListener('click',cerrar);
   $('#confirmEditar').addEventListener('click',()=>{
     if(!objEditando)return;
     const obj=objEditando,nombre=$('#edit-nombre').value.trim(),metros=parseFloat($('#edit-metros').value),manga=parseFloat($('#edit-manga').value),color=$('#edit-color').value;
     const banda=segBanda.querySelector('.seg-btn.active')?.dataset.val||obj.orientacion;
-    if(!nombre){mostrarToast('⚠ Ingresá el nombre');return;}
+    if(!nombre){mostrarToast('⚠ Nombre requerido');return;}
     if(isNaN(metros)||metros<70){mostrarToast('⚠ Eslora mínima 70 m');return;}
     if(isNaN(manga)||manga<8){mostrarToast('⚠ Manga mínima 8 m');return;}
-    const escala=getEscala(),nuevoAncho=metros*escala,nuevoAlto=Math.max(30,Math.round(manga*escala));
-    const zona=$('#zonaBuques'),margenPx=MARGEN_BORDE_M*escala;
+    const escala=getEscala(),ap=metros*escala,alt=Math.max(30,Math.round(manga*escala));
+    const zona=$('#zonaBuques'),mp=MARGEN_BORDE_M*escala;
     let newX=parseFloat(obj.el.style.left);
-    if(hayColision(newX,nuevoAncho,obj.id)){mostrarToast('⚠ No cabe con ese tamaño');return;}
-    newX=Math.max(margenPx,Math.min(newX,zona.clientWidth-margenPx-nuevoAncho));
-    obj.nombre=nombre.toUpperCase(); obj.metros=metros; obj.manga=manga; obj.color=color; obj.orientacion=banda; obj.leftM=newX/escala;
+    if(hayColision(newX,ap,obj.id)){mostrarToast('⚠ No cabe con ese tamaño');return;}
+    newX=Math.max(mp,Math.min(newX,zona.clientWidth-mp-ap));
+    obj.nombre=nombre.toUpperCase();obj.metros=metros;obj.manga=manga;obj.color=color;obj.orientacion=banda;obj.leftM=newX/escala;
     obj.el.className=`buque${banda==='babor'?' babor':''}${obj.locked?' locked':''}`;
-    obj.el.style.width=nuevoAncho+'px'; obj.el.style.height=nuevoAlto+'px'; obj.el.style.left=newX+'px';
+    obj.el.style.width=ap+'px';obj.el.style.height=alt+'px';obj.el.style.left=newX+'px';
     obj.el.innerHTML=buqueHTML(obj);
     iniciarPanelCabos(obj);
     cabos.filter(c=>c.buqueId===obj.id).forEach(c=>{
-      const p=document.createElement('div'); p.className='punto-amarre'; p.dataset.id=c.id;
-      p.style.left=(c.pctX*100)+'%'; p.style.top=(c.pctY*100)+'%';
+      const p=document.createElement('div');p.className='punto-amarre';p.dataset.id=c.id;
+      p.style.left=(c.pctX*100)+'%';p.style.top=(c.pctY*100)+'%';
       p.addEventListener('dblclick',e=>{e.stopPropagation();eliminarCabo(c.id);});
-      obj.el.appendChild(p); c.puntoEl=p;
+      obj.el.appendChild(p);c.puntoEl=p;
     });
-    actualizarCabosBuque(obj); actualizarPanelCabosBuque(obj);
-    calcularBitas(obj); actualizarTabla(); guardarEstado(); cerrar();
+    actualizarCabosBuque(obj);actualizarPanelCabosBuque(obj);
+    calcularBitas(obj);actualizarTabla();guardarEstado();cerrar();
     mostrarToast(`✓ ${obj.nombre} actualizado`);
   });
-
   $('#eliminarBuque').addEventListener('click',()=>{
     if(!objEditando)return;
-    const obj=objEditando; cerrar();
+    const obj=objEditando;cerrar();
     cabos.filter(c=>c.buqueId===obj.id).forEach(c=>{c.puntoEl?.remove();c.lineaEl?.remove();});
     cabos=cabos.filter(c=>c.buqueId!==obj.id);
     obj.el.classList.add('saliendo');
@@ -700,48 +653,228 @@ function abrirModalEditar(obj){
 })();
 
 /* ============================================================
-   MODAL IMPRIMIR
+   EXPORTAR / IMPRIMIR
+   Estrategia: dibujamos todo en un canvas y luego:
+   - Print: mostramos el canvas en #printZone y llamamos window.print()
+   - Imagen: descargamos directamente el canvas como PNG
 ============================================================ */
+function renderizarCanvas(callback){
+  const canvas=$('#printCanvas');
+  const zona=$('#zonaBuques');
+  const muelle=$('#muelle');
+  const zonaR=zona.getBoundingClientRect();
+  const muelleR=muelle.getBoundingClientRect();
+
+  const W=Math.round(zonaR.width);
+  const H=Math.round(zonaR.height+muelleR.height);
+  const DPR=2; // alta resolución
+
+  canvas.width=W*DPR;
+  canvas.height=H*DPR;
+  canvas.style.width=W+'px';
+  canvas.style.height=H+'px';
+
+  const ctx=canvas.getContext('2d');
+  ctx.scale(DPR,DPR);
+
+  // --- Fondo agua ---
+  const gradAgua=ctx.createLinearGradient(0,0,0,H);
+  gradAgua.addColorStop(0,'#c2ecf8');
+  gradAgua.addColorStop(0.35,'#90d4ea');
+  gradAgua.addColorStop(0.7,'#62bcd8');
+  gradAgua.addColorStop(1,'#4aaecc');
+  ctx.fillStyle=gradAgua;
+  ctx.fillRect(0,0,W,zonaR.height);
+
+  // Ondas (líneas horizontales sutiles)
+  ctx.strokeStyle='rgba(255,255,255,0.10)';
+  ctx.lineWidth=2;
+  for(let y=0;y<zonaR.height;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // --- Buques ---
+  const escala=getEscala();
+  buques.forEach(obj=>{
+    const elR=obj.el.getBoundingClientRect();
+    const x=elR.left-zonaR.left;
+    const y=elR.top-zonaR.top;
+    const w=elR.width, h=elR.height;
+
+    // Sombra
+    ctx.shadowColor='rgba(0,0,0,0.25)';ctx.shadowBlur=10;ctx.shadowOffsetY=4;
+
+    // Casco con forma redondeada (proa)
+    const r=h/2;
+    ctx.beginPath();
+    if(obj.orientacion==='babor'){
+      ctx.moveTo(x+r,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w,y+h);ctx.lineTo(x+r,y+h);
+      ctx.arc(x+r,y+h/2,r,Math.PI*0.5,Math.PI*1.5,true); // proa izq
+    } else {
+      ctx.moveTo(x,y);ctx.lineTo(x+w-r,y);
+      ctx.arc(x+w-r,y+h/2,r,-Math.PI*0.5,Math.PI*0.5); // proa der
+      ctx.lineTo(x,y+h);
+    }
+    ctx.closePath();
+
+    const grad=ctx.createLinearGradient(x,y,x+w,y+h);
+    grad.addColorStop(0,obj.color);
+    grad.addColorStop(1,darken(obj.color,22));
+    ctx.fillStyle=grad;
+    ctx.fill();
+    ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+
+    // Texto nombre
+    ctx.fillStyle='rgba(255,255,255,0.95)';
+    ctx.font=`bold ${Math.max(10,h*0.22)}px Syne,sans-serif`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=3;
+    ctx.fillText(obj.nombre,x+w/2,y+h/2-4);
+    ctx.font=`${Math.max(8,h*0.16)}px "JetBrains Mono",monospace`;
+    ctx.fillStyle='rgba(255,255,255,0.65)';
+    ctx.fillText(`${obj.metros}m`,x+w/2,y+h/2+h*0.2);
+    ctx.shadowBlur=0;
+  });
+
+  // --- Cabos ---
+  ctx.strokeStyle='#ff6600';
+  ctx.lineWidth=2;
+  ctx.lineCap='round';
+  ctx.shadowColor='rgba(255,100,0,0.4)';ctx.shadowBlur=4;
+  cabos.forEach(cabo=>{
+    const obj=buques.find(b=>b.id===cabo.buqueId);
+    if(!obj)return;
+    const elR=obj.el.getBoundingClientRect();
+    const px=(elR.left-zonaR.left)+cabo.pctX*elR.width;
+    const py=(elR.top-zonaR.top)+cabo.pctY*elR.height;
+    const bitaData=BITAS.find(b=>b.num===cabo.bitaNum);
+    if(!bitaData)return;
+    const bx=bitaData.pos*escala;
+    const by=zonaR.height+10; // top del muelle
+    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(bx,by);ctx.stroke();
+    // punto de amarre
+    ctx.fillStyle='#ff6600';ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+  });
+  ctx.shadowBlur=0;
+
+  // --- Muelle ---
+  const my=zonaR.height;
+  // Borde agua-muelle
+  const gradEspuma=ctx.createLinearGradient(0,my,0,my+10);
+  gradEspuma.addColorStop(0,'rgba(74,174,204,0.5)');
+  gradEspuma.addColorStop(1,'transparent');
+  ctx.fillStyle=gradEspuma;ctx.fillRect(0,my,W,10);
+
+  // Tablones de madera
+  const gradMadera=ctx.createLinearGradient(0,my+10,0,my+muelleR.height);
+  gradMadera.addColorStop(0,'#caba90');
+  gradMadera.addColorStop(0.4,'#b8a478');
+  gradMadera.addColorStop(1,'#a08858');
+  ctx.fillStyle=gradMadera;ctx.fillRect(0,my+10,W,muelleR.height-10);
+  ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=1;
+  for(let x2=0;x2<W;x2+=30){ctx.beginPath();ctx.moveTo(x2,my+10);ctx.lineTo(x2,my+muelleR.height);ctx.stroke();}
+
+  // Borde superior muelle
+  ctx.fillStyle='#7a6030';ctx.fillRect(0,my+10,W,4);
+
+  // Bitas
+  BITAS.forEach(b=>{
+    const bx=b.pos*escala;
+    const by=my+10;
+    // Palo
+    ctx.strokeStyle=b.cap===250?'#c0392b':b.cap===150?'#7a6030':'#b0a080';
+    ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx,by-18);ctx.stroke();
+    // Cabeza
+    const cr=b.cap===250?6:b.cap===150?5:4;
+    const bc=b.cap===250?'#e05040':b.cap===150?'#aaa':'#ccc';
+    ctx.fillStyle=bc;ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=3;
+    ctx.beginPath();ctx.arc(bx,by-18,cr,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    // Número
+    ctx.fillStyle=b.cap===250?'#a02020':b.cap===150?'rgba(55,35,5,0.7)':'rgba(55,35,5,0.45)';
+    ctx.font=`bold ${b.cap===250?10:9}px "JetBrains Mono",monospace`;
+    ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText(String(b.num),bx,by-18+cr+3);
+  });
+
+  // Labels zona
+  ctx.fillStyle='rgba(70,45,5,0.5)';ctx.font='bold 9px "JetBrains Mono",monospace';ctx.textAlign='left';
+  ctx.fillText('◀ 212 — 201',16,my+muelleR.height-18);
+  ctx.textAlign='right';ctx.fillText('201 — 10 ▶',W-50,my+muelleR.height-18);
+
+  if(callback)callback(canvas);
+}
+
 (function initImprimir(){
   const btn=$('#btnImprimir'),overlay=$('#overlayImprimir'),modal=$('#modalImprimir'),close=$('#closeImprimir');
-
   function abrir(){overlay.style.display='block';modal.style.display='block';requestAnimationFrame(()=>{overlay.classList.add('visible');modal.classList.add('visible');});}
   function cerrar(){overlay.classList.remove('visible');modal.classList.remove('visible');setTimeout(()=>{overlay.style.display='none';modal.style.display='none';},230);}
-
   btn?.addEventListener('click',abrir);
   close?.addEventListener('click',cerrar);
   overlay?.addEventListener('click',cerrar);
 
-  $('#btnPrintDirect')?.addEventListener('click',()=>{ cerrar(); setTimeout(()=>window.print(),300); });
+  // IMPRIMIR
+  $('#btnPrintDirect')?.addEventListener('click',()=>{
+    cerrar();
+    mostrarToast('🖨️ Preparando impresión...');
+    setTimeout(()=>{
+      // Construir zona print
+      prepararPrintZone();
+      setTimeout(()=>window.print(),300);
+    },300);
+  });
 
-  $('#btnPrintImg')?.addEventListener('click',async()=>{
+  // GUARDAR IMAGEN
+  $('#btnPrintImg')?.addEventListener('click',()=>{
     cerrar();
     mostrarToast('📸 Generando imagen...');
-    try {
-      // Usamos html2canvas si está disponible, sino dom-to-image via CDN
-      const script=document.createElement('script');
-      script.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-      document.head.appendChild(script);
-      script.onload=async()=>{
-        const zona=document.querySelector('.zona-principal');
-        const canvas=await window.html2canvas(zona,{
-          backgroundColor:'#90d4ea',
-          scale:2,
-          useCORS:true,
-          logging:false
-        });
+    setTimeout(()=>{
+      renderizarCanvas(canvas=>{
         const link=document.createElement('a');
         link.download=`docksim-${new Date().toISOString().slice(0,16).replace('T','_')}.png`;
         link.href=canvas.toDataURL('image/png');
         link.click();
         mostrarToast('✓ Imagen descargada');
-      };
-      script.onerror=()=>mostrarToast('⚠ Error cargando html2canvas');
-    } catch(e){ mostrarToast('⚠ Error generando imagen'); }
+      });
+    },200);
   });
 
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('visible'))cerrar();});
 })();
+
+function prepararPrintZone(){
+  // Fecha
+  const now=new Date();
+  const fecha=`${now.toLocaleDateString('es-UY')} ${now.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'})}`;
+  $('#pzFecha').textContent=fecha;
+
+  // Renderizar canvas del muelle
+  renderizarCanvas(()=>{});
+
+  // Tabla
+  const tbody=$('#pzTablaBody');
+  tbody.innerHTML='';
+  buques.forEach((obj,i)=>{
+    const misCabos=cabos.filter(c=>c.buqueId===obj.id);
+    const cabosStr=misCabos.length===0?'—':misCabos.map(c=>{
+      const z=c.pctX<0.3?(obj.orientacion==='babor'?'Popa':'Proa'):c.pctX>0.7?(obj.orientacion==='babor'?'Proa':'Popa'):'Centro';
+      return `${z}→${c.bitaNum}`;
+    }).join(' · ');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td><span class="pz-color-dot" style="background:${obj.color};margin-right:6px"></span><strong>${obj.nombre}</strong></td>
+      <td>${obj.orientacion.charAt(0).toUpperCase()+obj.orientacion.slice(1)}</td>
+      <td>${obj.metros} m</td>
+      <td>${obj.manga} m</td>
+      <td>${obj.bitaDesde} → ${obj.bitaHasta}</td>
+      <td>${cabosStr}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* Después de print, limpiar */
+window.addEventListener('afterprint',()=>{});
 
 /* ============================================================
    TOAST
@@ -756,11 +889,11 @@ function mostrarToast(msg){
    RESIZE
 ============================================================ */
 window.addEventListener('resize',()=>{
-  const escala=getEscala(),zona=$('#zonaBuques'),margenPx=MARGEN_BORDE_M*escala;
+  const escala=getEscala(),zona=$('#zonaBuques'),mp=MARGEN_BORDE_M*escala;
   buques.forEach(obj=>{
-    const nuevoAncho=obj.metros*escala,nuevoAlto=Math.max(30,Math.round(obj.manga*escala));
-    let newX=Math.max(margenPx,Math.min((obj.leftM||0)*escala,zona.clientWidth-margenPx-nuevoAncho));
-    obj.el.style.width=nuevoAncho+'px'; obj.el.style.height=nuevoAlto+'px'; obj.el.style.left=newX+'px';
+    const ap=obj.metros*escala,alt=Math.max(30,Math.round(obj.manga*escala));
+    let newX=Math.max(mp,Math.min((obj.leftM||0)*escala,zona.clientWidth-mp-ap));
+    obj.el.style.width=ap+'px';obj.el.style.height=alt+'px';obj.el.style.left=newX+'px';
     calcularBitas(obj); actualizarCabosBuque(obj);
   });
   generarBitas(); actualizarTabla();

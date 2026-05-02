@@ -11,205 +11,230 @@
 </head>
 <body>
 
-  <header class="header">
-    <div class="header-brand">
-      <div class="brand-icon">⚓</div>
-      <div class="brand-text">
-        <span class="brand-name">DOCKSIM</span>
-        <span class="brand-sub">Simulador de Atraque · Muelle Escala</span>
+  <!-- ===================== PANTALLA NORMAL ===================== -->
+  <div id="appScreen">
+
+    <header class="header">
+      <div class="header-brand">
+        <div class="brand-icon">⚓</div>
+        <div class="brand-text">
+          <span class="brand-name">DOCKSIM</span>
+          <span class="brand-sub">Simulador de Atraque · Muelle Escala</span>
+        </div>
+      </div>
+      <div class="header-center">
+        <span class="header-hint">Ctrl + clic sobre buque = punto de amarre</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn-print" id="btnImprimir" title="Exportar / Imprimir">🖨️</button>
+        <button class="btn-add" id="btnAgregarBuque">
+          <span class="btn-add-icon">＋</span>
+          <span>Nuevo Buque</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="zona-principal">
+      <svg class="svg-cabos" id="svgCabos" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="zona-buques" id="zonaBuques"></div>
+      <div class="muelle" id="muelle">
+        <div class="muelle-agua-top"></div>
+        <div class="muelle-superficie">
+          <div class="bitas-contenedor" id="bitasContenedor"></div>
+          <div class="muelle-linea-central"></div>
+          <div class="muelle-label-izq">◀ 212 — 201</div>
+          <div class="muelle-label-der">201 — 10 ▶</div>
+          <button class="btn-info-bitas" id="btnInfoBitas">?</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Panel info flotante (tooltip fijo arriba izq) -->
+    <div class="panel-info-flotante" id="panelInfoFlotante">
+      <div class="pif-header">
+        <span class="pif-icon" id="pifIcon">🚢</span>
+        <span class="pif-titulo" id="pifTitulo">—</span>
+      </div>
+      <div class="pif-body" id="pifBody"></div>
+    </div>
+
+    <!-- Panel info bitas (modal) -->
+    <div class="overlay-info" id="overlayInfo"></div>
+    <div class="panel-info-bitas" id="panelInfoBitas">
+      <div class="panel-info-header">
+        <span class="panel-info-title">📋 Bitas — Muelle Escala</span>
+        <button class="panel-info-close" id="closeInfoBitas">✕</button>
+      </div>
+      <div class="panel-info-leyenda">
+        <span class="leyenda-item leyenda-250"><span class="leyenda-dot"></span>250 t · Reforzada</span>
+        <span class="leyenda-item leyenda-150"><span class="leyenda-dot"></span>150 t · Estándar</span>
+        <span class="leyenda-item leyenda-55"><span class="leyenda-dot"></span>55 t · Liviana</span>
+      </div>
+      <div class="panel-info-body">
+        <table class="tabla-info-bitas">
+          <thead><tr><th>Bita</th><th>Pos. (m)</th><th>Dist. sig. (m)</th><th>Capacidad</th></tr></thead>
+          <tbody id="tablaInfoBody"></tbody>
+        </table>
       </div>
     </div>
-    <div class="header-center">
-      <span class="header-hint">Ctrl + clic sobre buque = punto de amarre</span>
-    </div>
-    <div class="header-actions">
-      <!-- <button class="btn-print" id="btnImprimir" title="Exportar / Imprimir">🖨️</button> -->
-      <button class="btn-add" id="btnAgregarBuque">
-        <span class="btn-add-icon">＋</span>
-        <span>Nuevo Buque</span>
-      </button>
-    </div>
-  </header>
 
-  <main class="zona-principal">
-    <svg class="svg-cabos" id="svgCabos" xmlns="http://www.w3.org/2000/svg"></svg>
-    <div class="zona-buques" id="zonaBuques"></div>
-
-    <div class="muelle" id="muelle">
-      <div class="muelle-agua-top"></div>
-      <div class="muelle-superficie">
-        <div class="bitas-contenedor" id="bitasContenedor"></div>
-        <div class="muelle-linea-central"></div>
-        <div class="muelle-label-izq">◀ 212 — 201</div>
-        <div class="muelle-label-der">201 — 10 ▶</div>
-        <button class="btn-info-bitas" id="btnInfoBitas">?</button>
+    <!-- Panel flotante buques -->
+    <div class="panel-flotante" id="panelFlotante">
+      <div class="panel-header" id="panelHeader">
+        <span class="panel-title">🚢 Buques en muelle</span>
+        <button class="panel-toggle" id="panelToggle">▼</button>
+      </div>
+      <div class="panel-body" id="panelBody">
+        <table class="tabla-buques" id="tablaBuques" style="display:none">
+          <thead>
+            <tr><th></th><th>Nombre</th><th>Banda</th><th>Eslora</th><th>Manga</th><th>Bitas</th><th>🔒</th><th>⚓</th></tr>
+          </thead>
+          <tbody id="tablaBody"></tbody>
+        </table>
+        <div class="panel-empty" id="panelEmpty">Sin buques en muelle</div>
       </div>
     </div>
-  </main>
 
-  <!-- PANEL INFO FLOTANTE (tooltip fijo arriba izquierda) -->
-  <div class="panel-info-flotante" id="panelInfoFlotante">
-    <div class="pif-header">
-      <span class="pif-icon" id="pifIcon">🚢</span>
-      <span class="pif-titulo" id="pifTitulo">—</span>
+    <!-- Modal agregar -->
+    <div class="overlay" id="overlayAgregar"></div>
+    <div class="modal" id="modalAgregar">
+      <div class="modal-header">
+        <h2 class="modal-title">Nuevo Buque</h2>
+        <button class="modal-close" id="closeAgregar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label class="field-label">Nombre</label>
+          <input class="field-input" type="text" id="inp-nombre" placeholder="CAP SAN LAZARO" autocomplete="off" style="text-transform:uppercase" />
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label class="field-label">Eslora (m)</label>
+            <input class="field-input" type="number" id="inp-metros" placeholder="300" min="70" max="400" />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Manga (m)</label>
+            <input class="field-input" type="number" id="inp-manga" placeholder="35" min="8" max="70" />
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Banda</label>
+          <div class="field-segmented" id="seg-banda">
+            <button class="seg-btn active" data-val="estribor">Estribor</button>
+            <button class="seg-btn" data-val="babor">Babor</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Color</label>
+          <div class="color-row">
+            <input class="field-color" type="color" id="inp-color" />
+            <button class="btn-random-color" id="btnRandomColor">🎲 Aleatorio</button>
+            <div class="color-swatches" id="colorSwatches"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="cancelAgregar">Cancelar</button>
+        <button class="btn-confirm" id="confirmAgregar">Colocar Buque</button>
+      </div>
     </div>
-    <div class="pif-body" id="pifBody"></div>
+
+    <!-- Modal editar -->
+    <div class="overlay" id="overlayEditar"></div>
+    <div class="modal" id="modalEditar">
+      <div class="modal-header">
+        <h2 class="modal-title">Editar Buque</h2>
+        <button class="modal-close" id="closeEditar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label class="field-label">Nombre</label>
+          <input class="field-input" type="text" id="edit-nombre" autocomplete="off" style="text-transform:uppercase" />
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label class="field-label">Eslora (m)</label>
+            <input class="field-input" type="number" id="edit-metros" min="70" max="400" />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Manga (m)</label>
+            <input class="field-input" type="number" id="edit-manga" min="8" max="70" />
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Banda</label>
+          <div class="field-segmented" id="seg-edit-banda">
+            <button class="seg-btn active" data-val="estribor">Estribor</button>
+            <button class="seg-btn" data-val="babor">Babor</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Color</label>
+          <div class="color-row">
+            <input class="field-color" type="color" id="edit-color" />
+            <button class="btn-random-color" id="editBtnRandom">🎲 Aleatorio</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger" id="eliminarBuque">Eliminar</button>
+        <button class="btn-cancel" id="cancelEditar">Cancelar</button>
+        <button class="btn-confirm" id="confirmEditar">Guardar</button>
+      </div>
+    </div>
+
+    <!-- Modal imprimir -->
+    <div class="overlay" id="overlayImprimir"></div>
+    <div class="modal" id="modalImprimir">
+      <div class="modal-header">
+        <h2 class="modal-title">🖨️ Exportar / Imprimir</h2>
+        <button class="modal-close" id="closeImprimir">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="print-desc">Genera un snapshot del estado actual con todos los buques y cabos.</p>
+        <div class="print-options">
+          <button class="print-opt-btn" id="btnPrintDirect">
+            <span class="print-opt-icon">🖨️</span>
+            <div>
+              <span class="print-opt-label">Imprimir / Guardar PDF</span>
+              <span class="print-opt-sub">Abre el diálogo de impresión del navegador</span>
+            </div>
+          </button>
+          <button class="print-opt-btn" id="btnPrintImg">
+            <span class="print-opt-icon">🖼️</span>
+            <div>
+              <span class="print-opt-label">Guardar como imagen PNG</span>
+              <span class="print-opt-sub">Descarga un PNG del muelle con buques y cabos</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
   </div>
 
-  <!-- PANEL INFO BITAS (modal) -->
-  <div class="overlay-info" id="overlayInfo"></div>
-  <div class="panel-info-bitas" id="panelInfoBitas">
-    <div class="panel-info-header">
-      <span class="panel-info-title">📋 Bitas — Muelle Escala</span>
-      <button class="panel-info-close" id="closeInfoBitas">✕</button>
+  <!-- ===================== ZONA DE IMPRESION ===================== -->
+  <!-- Este div solo se ve al imprimir, se construye dinámicamente desde JS -->
+  <div id="printZone" style="display:none">
+    <div class="pz-header">
+      <div class="pz-brand">⚓ DOCKSIM — Simulador de Atraque · Muelle Escala</div>
+      <div class="pz-fecha" id="pzFecha"></div>
     </div>
-    <div class="panel-info-leyenda">
-      <span class="leyenda-item leyenda-250"><span class="leyenda-dot"></span>250 t · Reforzada</span>
-      <span class="leyenda-item leyenda-150"><span class="leyenda-dot"></span>150 t · Estándar</span>
-      <span class="leyenda-item leyenda-55"><span class="leyenda-dot"></span>55 t · Liviana</span>
+    <div class="pz-muelle-wrap">
+      <canvas id="printCanvas"></canvas>
     </div>
-    <div class="panel-info-body">
-      <table class="tabla-info-bitas">
+    <div class="pz-tabla-wrap">
+      <div class="pz-tabla-titulo">Estado del Muelle</div>
+      <table class="pz-tabla" id="pzTabla">
         <thead>
-          <tr><th>Bita</th><th>Pos. (m)</th><th>Dist. sig. (m)</th><th>Capacidad</th></tr>
+          <tr><th>#</th><th>Nombre</th><th>Banda</th><th>Eslora</th><th>Manga</th><th>Bitas</th><th>Cabos</th></tr>
         </thead>
-        <tbody id="tablaInfoBody"></tbody>
+        <tbody id="pzTablaBody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- PANEL FLOTANTE BUQUES (arriba derecha) -->
-  <div class="panel-flotante" id="panelFlotante">
-    <div class="panel-header" id="panelHeader">
-      <span class="panel-title">🚢 Buques en muelle</span>
-      <button class="panel-toggle" id="panelToggle">▼</button>
-    </div>
-    <div class="panel-body" id="panelBody">
-      <table class="tabla-buques" id="tablaBuques" style="display:none">
-        <thead>
-          <tr>
-            <th></th><th>Nombre</th><th>Banda</th><th>Eslora</th><th>Manga</th><th>Bitas</th><th>🔒</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="tablaBody"></tbody>
-      </table>
-      <div class="panel-empty" id="panelEmpty">Sin buques en muelle</div>
-    </div>
-  </div>
-
-  <!-- MODAL AGREGAR -->
-  <div class="overlay" id="overlayAgregar"></div>
-  <div class="modal" id="modalAgregar">
-    <div class="modal-header">
-      <h2 class="modal-title">Nuevo Buque</h2>
-      <button class="modal-close" id="closeAgregar">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="field-group">
-        <label class="field-label">Nombre</label>
-        <input class="field-input" type="text" id="inp-nombre" placeholder="CAP SAN LAZARO" autocomplete="off" style="text-transform:uppercase" />
-      </div>
-      <div class="field-row">
-        <div class="field-group">
-          <label class="field-label">Eslora (m)</label>
-          <input class="field-input" type="number" id="inp-metros" placeholder="300" min="70" max="400" />
-        </div>
-        <div class="field-group">
-          <label class="field-label">Manga (m)</label>
-          <input class="field-input" type="number" id="inp-manga" placeholder="35" min="8" max="70" />
-        </div>
-      </div>
-      <div class="field-group">
-        <label class="field-label">Banda</label>
-        <div class="field-segmented" id="seg-banda">
-          <button class="seg-btn active" data-val="estribor">Estribor</button>
-          <button class="seg-btn" data-val="babor">Babor</button>
-        </div>
-      </div>
-      <div class="field-group">
-        <label class="field-label">Color</label>
-        <div class="color-row">
-          <input class="field-color" type="color" id="inp-color" />
-          <button class="btn-random-color" id="btnRandomColor">🎲 Aleatorio</button>
-          <div class="color-swatches" id="colorSwatches"></div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" id="cancelAgregar">Cancelar</button>
-      <button class="btn-confirm" id="confirmAgregar">Colocar Buque</button>
-    </div>
-  </div>
-
-  <!-- MODAL EDITAR -->
-  <div class="overlay" id="overlayEditar"></div>
-  <div class="modal" id="modalEditar">
-    <div class="modal-header">
-      <h2 class="modal-title">Editar Buque</h2>
-      <button class="modal-close" id="closeEditar">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="field-group">
-        <label class="field-label">Nombre</label>
-        <input class="field-input" type="text" id="edit-nombre" autocomplete="off" style="text-transform:uppercase" />
-      </div>
-      <div class="field-row">
-        <div class="field-group">
-          <label class="field-label">Eslora (m)</label>
-          <input class="field-input" type="number" id="edit-metros" min="70" max="400" />
-        </div>
-        <div class="field-group">
-          <label class="field-label">Manga (m)</label>
-          <input class="field-input" type="number" id="edit-manga" min="8" max="70" />
-        </div>
-      </div>
-      <div class="field-group">
-        <label class="field-label">Banda</label>
-        <div class="field-segmented" id="seg-edit-banda">
-          <button class="seg-btn active" data-val="estribor">Estribor</button>
-          <button class="seg-btn" data-val="babor">Babor</button>
-        </div>
-      </div>
-      <div class="field-group">
-        <label class="field-label">Color</label>
-        <div class="color-row">
-          <input class="field-color" type="color" id="edit-color" />
-          <button class="btn-random-color" id="editBtnRandom">🎲 Aleatorio</button>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-danger" id="eliminarBuque">Eliminar</button>
-      <button class="btn-cancel" id="cancelEditar">Cancelar</button>
-      <button class="btn-confirm" id="confirmEditar">Guardar</button>
-    </div>
-  </div>
-
-  <!-- MODAL IMPRIMIR -->
-  <div class="overlay" id="overlayImprimir"></div>
-  <div class="modal" id="modalImprimir">
-    <div class="modal-header">
-      <h2 class="modal-title">🖨️ Exportar / Imprimir</h2>
-      <button class="modal-close" id="closeImprimir">✕</button>
-    </div>
-    <div class="modal-body">
-      <p class="print-desc">Genera un snapshot del estado actual del muelle con todos los buques y cabos.</p>
-      <div class="print-options">
-        <button class="print-opt-btn" id="btnPrintDirect">
-          <span class="print-opt-icon">🖨️</span>
-          <span class="print-opt-label">Imprimir / PDF</span>
-          <span class="print-opt-sub">Abre el diálogo de impresión del navegador</span>
-        </button>
-        <button class="print-opt-btn" id="btnPrintImg">
-          <span class="print-opt-icon">🖼️</span>
-          <span class="print-opt-label">Guardar como imagen</span>
-          <span class="print-opt-sub">Descarga un PNG del muelle actual</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div class="toast" id="toast"></div>
   <script src="script.js"></script>
 </body>
 </html>
