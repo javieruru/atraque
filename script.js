@@ -276,9 +276,24 @@ function cargarEstado(){
       calcularBitas(obj); iniciarDrag(obj); iniciarHoverInfo(obj); iniciarPanelCabos(obj);
       if(obj.locked)obj.el.classList.add('locked');
     });
-    const rawC=localStorage.getItem('docksim_cabos'),cntC=localStorage.getItem('docksim_cabo_counter');
-    if(rawC){const cd=JSON.parse(rawC);if(cntC)caboCounter=parseInt(cntC);cd.forEach(c=>{const o=buques.find(b=>b.id===c.buqueId);if(o)crearCabo(o,c.pctX,c.pctY,c.bitaNum,c.id);});}
     actualizarTabla();
+
+    // Restaurar cabos DESPUÉS de que el layout esté completamente pintado
+    // Doble rAF garantiza que getBoundingClientRect() devuelva valores correctos
+    const rawC=localStorage.getItem('docksim_cabos'),cntC=localStorage.getItem('docksim_cabo_counter');
+    if(rawC){
+      const cd=JSON.parse(rawC);
+      if(cntC) caboCounter=parseInt(cntC);
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          cd.forEach(c=>{
+            const o=buques.find(b=>b.id===c.buqueId);
+            if(o) crearCabo(o,c.pctX,c.pctY,c.bitaNum,c.id);
+          });
+          actualizarTabla(); // actualizar tabla con conteo de cabos
+        });
+      });
+    }
   }catch(e){console.warn('Error:',e);actualizarTabla();}
 }
 
@@ -895,4 +910,17 @@ window.addEventListener('resize',()=>{
 /* ============================================================
    INIT
 ============================================================ */
-window.addEventListener('load',()=>{ generarBitas(); cargarEstado(); });
+window.addEventListener('load',()=>{
+  generarBitas();
+  cargarEstado();
+  // Re-dibujar líneas de cabos una vez que la página esté completamente cargada
+  // (fonts, imágenes, layout final)
+  window.addEventListener('load', ()=>{
+    requestAnimationFrame(()=>{
+      cabos.forEach(c=>{
+        const obj=buques.find(b=>b.id===c.buqueId);
+        if(obj) actualizarLineaCabo(c,obj);
+      });
+    });
+  }, {once:true});
+});
