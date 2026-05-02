@@ -110,7 +110,7 @@ function mostrarInfoBuque(obj){
   pifTitulo.textContent=obj.nombre;
   const misCabos=cabos.filter(c=>c.buqueId===obj.id);
   const cabosStr=misCabos.length===0?'Sin cabos':misCabos.map(c=>{
-    const z=c.pctX<0.3?(obj.orientacion==='babor'?'Popa':'Proa'):c.pctX>0.7?(obj.orientacion==='babor'?'Proa':'Popa'):'Centro';
+    const z=c.pctX<0.3?(obj.orientacion==='babor'?'Proa':'Popa'):c.pctX>0.7?(obj.orientacion==='babor'?'Popa':'Proa'):'Centro';
     return `${z} → Bita ${c.bitaNum}`;
   }).join('<br>');
   pifBody.innerHTML=`
@@ -978,7 +978,7 @@ function renderizarCanvas(){
     return Math.max(max, Math.max(30, Math.round(obj.manga * escala)));
   }, 60);
   // Mostrar solo el agua necesaria: altura del buque más alto + margen
-  const aguaVisible = alturaMaxBuque + 220;
+  const aguaVisible = alturaMaxBuque + 1230;
   const muelleH    = muelleR.height;
   const W = Math.round(zonaR.width);
   const H = aguaVisible + muelleH;
@@ -1221,9 +1221,9 @@ function prepararPrintZone(){
       ? '<span style="color:#aaa">—</span>'
       : misCabos.map(c=>{
           const z = c.pctX < 0.3
-            ? (obj.orientacion==='babor' ? 'Popa' : 'Proa')
-            : c.pctX > 0.7
             ? (obj.orientacion==='babor' ? 'Proa' : 'Popa')
+            : c.pctX > 0.7
+            ? (obj.orientacion==='babor' ? 'Popa' : 'Proa')
             : 'Centro';
           return `<span class="pz-cabo-tag">${z} → ${c.bitaNum}</span>`;
         }).join('');
