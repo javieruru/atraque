@@ -550,7 +550,6 @@ function actualizarTabla(){
     const trCabos=document.createElement('tr');
     trCabos.className='fila-cabos-wrap';
     trCabos.id=`tcr-${obj.id}`;
-    trCabos.style.display='none';
     const tdCabos=document.createElement('td');
     tdCabos.colSpan=8;
     const inner=document.createElement('div');
@@ -572,7 +571,7 @@ function actualizarTabla(){
 
     // Restaurar estado abierto si estaba expandido
     if(caboRowsOpen.has(obj.id)){
-      trCabos.style.display='';
+      trCabos.classList.add('abierto');
     }
   });
 }
@@ -590,8 +589,7 @@ $('#tablaBody').addEventListener('click',e=>{
     const id=parseInt(caboToggle.dataset.id);
     const tr=$(`#tcr-${id}`);
     if(tr){
-      const open=tr.style.display==='none';
-      tr.style.display=open?'':'none';
+      const open=tr.classList.toggle('abierto');
       if(open) caboRowsOpen.add(id); else caboRowsOpen.delete(id);
     }
     return;
