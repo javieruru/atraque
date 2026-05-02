@@ -352,16 +352,50 @@ document.addEventListener('keyup',  e=>{if(e.key==='Control')document.body.class
    SISTEMA CABOS (SVG)
 ============================================================ */
 const svgCabos=$('#svgCabos');
-function getSVGRef(){return $('#svgCabos').getBoundingClientRect();}
-function getBitaPos(bitaNum){
-  const bitaEl=$(`.bita[data-num="${bitaNum}"]`);
-  if(!bitaEl)return null;
-  const svgR=getSVGRef(),ref=bitaEl.querySelector('.bita-cabeza')||bitaEl,refR=ref.getBoundingClientRect();
-  return{x:refR.left-svgR.left+refR.width/2,y:refR.top-svgR.top+refR.height/2};
+
+/* Coordenadas SVG: usamos la zona-principal como origen único.
+   El SVG tiene inset:0 dentro de zona-principal, así que
+   coordenada SVG = coordenada relativa a zona-principal.
+   Calculamos TODO en metros/escala para evitar depender del layout
+   en el momento de la restauración. */
+
+function getZonaRef(){
+  return document.querySelector('.zona-principal').getBoundingClientRect();
 }
+
+function getBitaPos(bitaNum){
+  // Calculamos por escala directamente, sin depender del DOM de la bita
+  const bita=BITAS.find(b=>b.num===bitaNum);
+  if(!bita) return null;
+  const escala=getEscala();
+  const zonaR=getZonaRef();
+  const svgR=svgCabos.getBoundingClientRect();
+  // X: posición de la bita en metros * escala, relativo al SVG
+  const x=bita.pos*escala + (zonaR.left - svgR.left);
+  // Y: top del muelle + un poco adentro (donde está la cabeza)
+  const muelleSup=document.querySelector('.muelle-superficie');
+  const muelleR=muelleSup ? muelleSup.getBoundingClientRect() : null;
+  const y=muelleR ? (muelleR.top - svgR.top + 8) : (zonaR.height + 8);
+  return {x, y};
+}
+
 function getPuntoPos(obj,pctX,pctY){
-  const svgR=getSVGRef(),elR=obj.el.getBoundingClientRect();
-  return{x:elR.left-svgR.left+pctX*elR.width,y:elR.top-svgR.top+pctY*elR.height};
+  // Calculamos por escala: left del buque en metros + pct del ancho
+  const escala=getEscala();
+  const svgR=svgCabos.getBoundingClientRect();
+  const zonaR=getZonaRef();
+  const buqueLeftPx=(obj.leftM||0)*escala;
+  const buqueW=obj.metros*escala;
+  const buqueH=Math.max(30,Math.round(obj.manga*escala));
+  // Y del buque: bottom=0 en zona-buques, que es zona-principal - muelle
+  const muelle=document.querySelector('.muelle');
+  const muelleH=muelle ? muelle.getBoundingClientRect().height : 140;
+  const zonaPH=zonaR.height; // altura total zona-principal
+  const buqueBottomY=zonaPH - muelleH; // donde termina el buque (pegado al muelle)
+  const buqueTopY=buqueBottomY - buqueH;
+  const x=(zonaR.left - svgR.left) + buqueLeftPx + pctX*buqueW;
+  const y=(zonaR.top  - svgR.top)  + buqueTopY   + pctY*buqueH;
+  return {x, y};
 }
 
 function crearCabo(obj,pctX,pctY,bitaNum,idForzado){
