@@ -559,7 +559,7 @@ function actualizarTabla(){
       inner.innerHTML='<span class="tcr-empty">Sin cabos amarrados</span>';
     } else {
       misCabos.forEach(c=>{
-        const z=c.pctX<0.3?(obj.orientacion==='babor'?'Popa':'Proa'):c.pctX>0.7?(obj.orientacion==='babor'?'Proa':'Popa'):'Centro';
+        const z=c.pctX<0.3?(obj.orientacion==='babor'?'Proa':'Popa'):c.pctX>0.7?(obj.orientacion==='babor'?'Popa':'Proa'):'Centro';
         const item=document.createElement('div'); item.className='tcr-item';
         item.innerHTML=`<div class="tcr-dot"></div><span>${z} → Bita ${c.bitaNum}</span><button class="tcr-eliminar" data-cabo="${c.id}">✕</button>`;
         inner.appendChild(item);
