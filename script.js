@@ -492,8 +492,8 @@ function actualizarTabla(){
       <td>${obj.bitaDesde} → ${obj.bitaHasta}</td>
       <td><button class="lock-btn-table" data-id="${obj.id}">${obj.locked?'🔒':'🔓'}</button></td>
       <td>
-        <button class="btn-toggle-cabos" data-id="${obj.id}">
-          ⚓${misCabos.length>0?` <span class="cabo-count">${misCabos.length}</span>`:''}
+        <button class="btn-toggle-cabos" data-id="${obj.id}" title="${misCabos.length} cabo(s)">
+          ⚓${misCabos.length>0?`<span class="cabo-count"> ${misCabos.length}</span>`:''}
         </button>
       </td>`;
     tbody.appendChild(tr);
@@ -521,8 +521,16 @@ function actualizarTabla(){
     tdCabos.appendChild(inner);
     trCabos.appendChild(tdCabos);
     tbody.appendChild(trCabos);
+
+    // Restaurar estado abierto si estaba expandido
+    if(caboRowsOpen.has(obj.id)){
+      trCabos.style.display='';
+    }
   });
 }
+
+// Track which cabo sub-rows are open
+const caboRowsOpen = new Set();
 
 // Delegación eventos tabla
 $('#tablaBody').addEventListener('click',e=>{
@@ -536,7 +544,11 @@ $('#tablaBody').addEventListener('click',e=>{
   if(caboToggle){
     const id=parseInt(caboToggle.dataset.id);
     const tr=$(`#tcr-${id}`);
-    if(tr)tr.style.display=tr.style.display==='none'?'':'none';
+    if(tr){
+      const open=tr.style.display==='none';
+      tr.style.display=open?'':'none';
+      if(open) caboRowsOpen.add(id); else caboRowsOpen.delete(id);
+    }
     return;
   }
   const elim=e.target.closest('.tcr-eliminar');
@@ -702,18 +714,26 @@ function renderizarCanvas(callback){
     // Sombra
     ctx.shadowColor='rgba(0,0,0,0.25)';ctx.shadowBlur=10;ctx.shadowOffsetY=4;
 
-    // Casco con forma redondeada (proa)
-    const r=h/2;
+    // Casco con forma redondeada
+    // Estribor: popa izq cuadrada, proa der redondeada
+    // Babor:    popa der cuadrada, proa izq redondeada
+    const r=Math.min(h/2, w*0.12);
     ctx.beginPath();
     if(obj.orientacion==='babor'){
-      ctx.moveTo(x+r,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w,y+h);ctx.lineTo(x+r,y+h);
-      ctx.arc(x+r,y+h/2,r,Math.PI*0.5,Math.PI*1.5,true); // proa izq
+      // proa izquierda
+      ctx.moveTo(x+w,y);
+      ctx.lineTo(x+r,y);
+      ctx.arc(x+r,y+h/2,r,Math.PI*1.5,Math.PI*0.5,true);
+      ctx.lineTo(x+w,y+h);
+      ctx.closePath();
     } else {
-      ctx.moveTo(x,y);ctx.lineTo(x+w-r,y);
-      ctx.arc(x+w-r,y+h/2,r,-Math.PI*0.5,Math.PI*0.5); // proa der
+      // proa derecha
+      ctx.moveTo(x,y);
+      ctx.lineTo(x+w-r,y);
+      ctx.arc(x+w-r,y+h/2,r,Math.PI*1.5,Math.PI*0.5,false);
       ctx.lineTo(x,y+h);
+      ctx.closePath();
     }
-    ctx.closePath();
 
     const grad=ctx.createLinearGradient(x,y,x+w,y+h);
     grad.addColorStop(0,obj.color);
@@ -776,25 +796,26 @@ function renderizarCanvas(callback){
   // Borde superior muelle
   ctx.fillStyle='#7a6030';ctx.fillRect(0,my+10,W,4);
 
-  // Bitas
+  // Bitas — dibujadas DENTRO del muelle (palo hacia abajo desde el borde superior)
   BITAS.forEach(b=>{
     const bx=b.pos*escala;
-    const by=my+10;
-    // Palo
+    const bitaTopY=my+14; // tope del palo: justo dentro del borde superior del muelle
+    const palH=18;
+    const cr=b.cap===250?6:b.cap===150?5:4;
+    // Palo (hacia abajo)
     ctx.strokeStyle=b.cap===250?'#c0392b':b.cap===150?'#7a6030':'#b0a080';
     ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx,by-18);ctx.stroke();
-    // Cabeza
-    const cr=b.cap===250?6:b.cap===150?5:4;
+    ctx.beginPath();ctx.moveTo(bx,bitaTopY);ctx.lineTo(bx,bitaTopY+palH);ctx.stroke();
+    // Cabeza (en la punta inferior del palo)
     const bc=b.cap===250?'#e05040':b.cap===150?'#aaa':'#ccc';
     ctx.fillStyle=bc;ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=3;
-    ctx.beginPath();ctx.arc(bx,by-18,cr,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(bx,bitaTopY+palH,cr,0,Math.PI*2);ctx.fill();
     ctx.shadowBlur=0;
-    // Número
+    // Número debajo de la cabeza
     ctx.fillStyle=b.cap===250?'#a02020':b.cap===150?'rgba(55,35,5,0.7)':'rgba(55,35,5,0.45)';
     ctx.font=`bold ${b.cap===250?10:9}px "JetBrains Mono",monospace`;
     ctx.textAlign='center';ctx.textBaseline='top';
-    ctx.fillText(String(b.num),bx,by-18+cr+3);
+    ctx.fillText(String(b.num),bx,bitaTopY+palH+cr+2);
   });
 
   // Labels zona
