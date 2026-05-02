@@ -655,6 +655,41 @@ $('#tablaBody').addEventListener('click',e=>{
    MODAL EDITAR
 ============================================================ */
 let objEditando=null;
+let pendienteBandaChange=null; // datos guardados mientras se confirma el cambio de banda
+
+function abrirModalConfirmBanda(nCabos){
+  const modal=$('#modalConfirmBanda');
+  const msg=$('#confirmBandaMsg');
+  if(msg) msg.textContent=`Este buque tiene ${nCabos} cabo${nCabos!==1?'s':''} amarrado${nCabos!==1?'s':''}. Al cambiar de banda se eliminarán. ¿Continuar?`;
+  modal.style.display='block';
+  requestAnimationFrame(()=>modal.classList.add('visible'));
+}
+
+function cerrarModalConfirmBanda(){
+  const modal=$('#modalConfirmBanda');
+  modal.classList.remove('visible');
+  setTimeout(()=>{ modal.style.display='none'; },230);
+  pendienteBandaChange=null;
+}
+
+function aplicarCambioBanda(){
+  if(!pendienteBandaChange) return;
+  const {obj,nombre,metros,manga,color,banda,newX,escala,ap,alt}=pendienteBandaChange;
+
+  // Eliminar todos los cabos del buque
+  cabos.filter(c=>c.buqueId===obj.id).forEach(c=>{ c.puntoEl?.remove(); c.lineaEl?.remove(); });
+  cabos=cabos.filter(c=>c.buqueId!==obj.id);
+
+  // Aplicar cambios
+  obj.nombre=nombre; obj.metros=metros; obj.manga=manga; obj.color=color; obj.orientacion=banda; obj.leftM=newX/escala;
+  obj.el.className=`buque${banda==='babor'?' babor':''}${obj.locked?' locked':''}`;
+  obj.el.style.width=ap+'px'; obj.el.style.height=alt+'px'; obj.el.style.left=newX+'px';
+  obj.el.innerHTML=buqueHTML(obj);
+  iniciarPanelCabos(obj);
+  calcularBitas(obj); actualizarTabla(); guardarEstado();
+  mostrarToast(`✓ ${obj.nombre} actualizado · cabos eliminados`);
+  cerrarModalConfirmBanda();
+}
 function abrirModalEditar(obj){
   objEditando=obj;
   const overlay=$('#overlayEditar'),modal=$('#modalEditar'),segBanda=$('#seg-edit-banda');
@@ -681,6 +716,15 @@ function abrirModalEditar(obj){
     let newX=parseFloat(obj.el.style.left);
     if(hayColision(newX,ap,obj.id)){mostrarToast('⚠ No cabe con ese tamaño');return;}
     newX=Math.max(mp,Math.min(newX,zona.clientWidth-mp-ap));
+    // Si cambió la banda y tiene cabos, pedir confirmación
+    const cabosBuque = cabos.filter(c=>c.buqueId===obj.id);
+    if(banda !== obj.orientacion && cabosBuque.length > 0){
+      // Guardar datos del edit para usar después de confirmar
+      pendienteBandaChange = { obj, nombre:nombre.toUpperCase(), metros, manga, color, banda, newX, escala, ap, alt };
+      cerrar();
+      abrirModalConfirmBanda(cabosBuque.length);
+      return;
+    }
     obj.nombre=nombre.toUpperCase();obj.metros=metros;obj.manga=manga;obj.color=color;obj.orientacion=banda;obj.leftM=newX/escala;
     obj.el.className=`buque${banda==='babor'?' babor':''}${obj.locked?' locked':''}`;
     obj.el.style.width=ap+'px';obj.el.style.height=alt+'px';obj.el.style.left=newX+'px';
@@ -692,8 +736,12 @@ function abrirModalEditar(obj){
       p.addEventListener('dblclick',e=>{e.stopPropagation();eliminarCabo(c.id);});
       obj.el.appendChild(p);c.puntoEl=p;
     });
-    actualizarCabosBuque(obj);actualizarPanelCabosBuque(obj);
-    calcularBitas(obj);actualizarTabla();guardarEstado();cerrar();
+    actualizarCabosBuque(obj);
+    actualizarPanelCabosBuque(obj);
+    calcularBitas(obj);
+    actualizarTabla();
+    guardarEstado();
+    cerrar();
     mostrarToast(`✓ ${obj.nombre} actualizado`);
   });
   $('#eliminarBuque').addEventListener('click',()=>{
@@ -940,6 +988,17 @@ function renderCanvas(canvasEl, aguaH, muelleH){
   ctx.textAlign = 'right';
   ctx.fillText('201 — 10 ▶', W - 40, my + 4);
 }
+
+/* ============================================================
+   MODAL CONFIRMACIÓN CAMBIO DE BANDA
+============================================================ */
+(function initModalConfirmBanda(){
+  const modal=$('#modalConfirmBanda');
+  if(!modal) return;
+  $('#confirmBandaSi')?.addEventListener('click', aplicarCambioBanda);
+  $('#confirmBandaNo')?.addEventListener('click', cerrarModalConfirmBanda);
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&modal.classList.contains('visible')) cerrarModalConfirmBanda(); });
+})();
 
 /* ============================================================
    INIT IMPRIMIR

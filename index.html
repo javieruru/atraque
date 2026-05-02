@@ -183,6 +183,21 @@
       </div>
     </div>
 
+    <!-- Modal confirmación cambio de banda -->
+    <div class="overlay" id="overlayConfirmBanda"></div>
+    <div class="modal" id="modalConfirmBanda">
+      <div class="modal-header">
+        <h2 class="modal-title">⚠️ Cambio de banda</h2>
+      </div>
+      <div class="modal-body">
+        <p class="field-label" style="font-size:13px;letter-spacing:0;text-transform:none;color:var(--text);line-height:1.6" id="confirmBandaMsg"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="confirmBandaNo">Cancelar</button>
+        <button class="btn-danger" style="margin-right:0" id="confirmBandaSi">Eliminar cabos y cambiar banda</button>
+      </div>
+    </div>
+
     <div class="toast" id="toast"></div>
   </div>
 
