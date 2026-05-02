@@ -121,33 +121,7 @@ body.ctrl-mode .buque:hover .buque-casco { outline:2px dashed rgba(255,255,255,.
 .punto-amarre { position:absolute; width:10px; height:10px; border-radius:50%; background:#fff; border:2px solid #ff6600; box-shadow:0 0 6px rgba(255,100,0,.8),0 0 0 2px rgba(255,100,0,.3); transform:translate(-50%,-50%); cursor:pointer; z-index:20; transition:transform .12s; pointer-events:all; }
 .punto-amarre:hover { transform:translate(-50%,-50%) scale(1.4); }
 
-/* Panel cabos DEBAJO del buque */
-.panel-cabos-buque {
-  position:absolute;
-  top:calc(100% + 6px);   /* DEBAJO del buque */
-  left:0;
-  min-width:200px;
-  max-width:300px;
-  background:rgba(255,255,255,.97);
-  border:1px solid var(--border);
-  border-radius:var(--radius-md);
-  box-shadow:0 4px 16px rgba(0,60,100,.18);
-  z-index:30;
-  overflow:hidden;
-  backdrop-filter:blur(8px);
-  display:none;
-}
-.panel-cabos-buque.visible { display:block; }
-.pcb-header { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:linear-gradient(135deg,#e2f5ee 0%,#d8eef8 100%); border-bottom:1px solid var(--border); font-size:10px; font-weight:800; letter-spacing:.08em; color:var(--text); text-transform:uppercase; }
-.pcb-toggle { background:none; border:none; cursor:pointer; font-size:10px; color:var(--text2); padding:1px 4px; border-radius:3px; }
-.pcb-body { max-height:120px; overflow-y:auto; }
-.pcb-empty { font-family:var(--font-mono); font-size:10px; color:var(--text3); padding:8px 10px; font-style:italic; }
-.pcb-cabo-item { display:flex; align-items:center; justify-content:space-between; padding:4px 10px; border-bottom:1px solid #eef4f8; font-family:var(--font-mono); font-size:10px; color:var(--text); }
-.pcb-cabo-item:last-child { border-bottom:none; }
-.pcb-cabo-info { display:flex; align-items:center; gap:6px; }
-.pcb-cabo-dot { width:8px; height:8px; border-radius:50%; background:#ff6600; flex-shrink:0; }
-.pcb-cabo-eliminar { background:none; border:none; cursor:pointer; color:var(--danger); font-size:12px; padding:0 3px; opacity:.6; transition:opacity .12s; }
-.pcb-cabo-eliminar:hover { opacity:1; }
+/* panel-cabos-buque removido — los cabos se muestran en la tabla flotante */
 
 .buque.entrando { animation:buqueEntrar .38s cubic-bezier(.22,1,.36,1) forwards; }
 @keyframes buqueEntrar { from{opacity:0;transform:translateY(-22px) scale(.92)}to{opacity:1;transform:translateY(0) scale(1)} }

@@ -216,12 +216,7 @@ function buqueHTML(info){
       </div>
     </div>
     <div class="lock-badge">🔒</div>
-    <div class="panel-cabos-buque" id="pcb-${info.id}">
-      <div class="pcb-header"><span>⚓ Cabos</span><button class="pcb-toggle" data-id="${info.id}">▼</button></div>
-      <div class="pcb-body" id="pcb-body-${info.id}">
-        <div class="pcb-empty" id="pcb-empty-${info.id}">Sin cabos</div>
-      </div>
-    </div>`;
+    `;
 }
 
 function crearBuqueEl(info){
@@ -436,35 +431,12 @@ function cancelarAmarre(){
    PANEL CABOS EN BUQUE
 ============================================================ */
 function iniciarPanelCabos(obj){
-  obj.el.addEventListener('click',e=>{
-    const btn=e.target.closest('.pcb-toggle');
-    if(!btn)return; e.stopPropagation();
-    const body=$(`#pcb-body-${obj.id}`);
-    if(!body)return;
-    const col=body.style.display==='none';
-    body.style.display=col?'':'none'; btn.textContent=col?'▼':'▲';
-  });
-  obj.el.addEventListener('click',e=>{
-    const btn=e.target.closest('.pcb-cabo-eliminar');
-    if(!btn)return; e.stopPropagation();
-    eliminarCabo(parseInt(btn.dataset.cabo));
-  });
+  // Panel de cabos ahora vive en la tabla flotante, no en el buque
 }
 
 function actualizarPanelCabosBuque(obj){
-  const panel=$(`#pcb-${obj.id}`),body=$(`#pcb-body-${obj.id}`),emptyEl=$(`#pcb-empty-${obj.id}`);
-  if(!panel||!body)return;
-  const misCabos=cabos.filter(c=>c.buqueId===obj.id);
-  panel.classList.toggle('visible',misCabos.length>0);
-  $$('.pcb-cabo-item',body).forEach(el=>el.remove());
-  if(misCabos.length===0){if(emptyEl)emptyEl.style.display='block';return;}
-  if(emptyEl)emptyEl.style.display='none';
-  misCabos.forEach(c=>{
-    const div=document.createElement('div'); div.className='pcb-cabo-item';
-    const z=c.pctX<0.3?(obj.orientacion==='babor'?'Popa':'Proa'):c.pctX>0.7?(obj.orientacion==='babor'?'Proa':'Popa'):'Centro';
-    div.innerHTML=`<div class="pcb-cabo-info"><div class="pcb-cabo-dot"></div><span>${z} → Bita ${c.bitaNum}</span></div><button class="pcb-cabo-eliminar" data-cabo="${c.id}">✕</button>`;
-    body.appendChild(div);
-  });
+  // Los cabos se muestran en la tabla flotante via actualizarTabla()
+  actualizarTabla();
 }
 
 /* ============================================================
