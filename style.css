@@ -241,7 +241,7 @@ body.ctrl-mode .buque:hover .buque-casco { outline:2px dashed rgba(255,255,255,.
 .btn-danger { background:transparent; color:var(--danger); border:1.5px solid var(--danger); border-radius:var(--radius-sm); padding:11px 16px; font-family:var(--font-main); font-size:14px; font-weight:700; cursor:pointer; margin-right:auto; }
 .btn-danger:hover { background:rgba(217,48,48,.08); }
 
-/* Modal imprimir */
+/* Modal imprimir — ver .modal-print arriba */
 .print-desc { font-size:13px; color:var(--text2); line-height:1.5; margin-bottom:4px; }
 .print-options { display:flex; flex-direction:column; gap:10px; }
 .print-opt-btn { display:flex; align-items:center; gap:14px; background:#f4fafd; border:1.5px solid var(--border); border-radius:var(--radius-md); padding:14px 18px; cursor:pointer; transition:background .15s,border-color .15s,transform .1s; text-align:left; width:100%; }
@@ -257,31 +257,47 @@ body.ctrl-mode .buque:hover .buque-casco { outline:2px dashed rgba(255,255,255,.
 ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 ::selection{background:rgba(14,158,110,.22);color:var(--text)}
 
-/* ============ ZONA DE IMPRESION ============ */
-#printZone { display:none; }
+/* ============================================================
+   ZONA DE IMPRESIÓN
+============================================================ */
+#printZone { display: none; }
 
-.pz-header { display:flex; justify-content:space-between; align-items:center; padding:12px 20px; background:linear-gradient(130deg,#0a7a55,#0e9e6e 50%,#1480c0); color:#fff; }
-.pz-brand { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; letter-spacing:.1em; }
-.pz-fecha { font-family:'JetBrains Mono',monospace; font-size:11px; opacity:.85; }
-.pz-muelle-wrap { width:100%; background:#90d4ea; padding:0; overflow:hidden; }
-.pz-muelle-wrap canvas { display:block; width:100% !important; height:auto !important; }
-.pz-tabla-wrap { padding:16px 20px; }
-.pz-tabla-titulo { font-family:'Syne',sans-serif; font-size:14px; font-weight:800; color:#0f2d3a; margin-bottom:10px; letter-spacing:.06em; text-transform:uppercase; }
-.pz-tabla { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:11px; }
-.pz-tabla th { background:#eef8fc; color:#2a5566; font-weight:700; font-size:10px; letter-spacing:.1em; text-transform:uppercase; padding:7px 12px; text-align:left; border-bottom:2px solid #a8d8ea; }
-.pz-tabla td { padding:6px 12px; color:#0f2d3a; border-bottom:1px solid #e4f2f8; }
+.pz-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 18px;
+  background:linear-gradient(130deg,#0a7a55 0%,#0e9e6e 50%,#1480c0 100%);
+  color:#fff;
+}
+.pz-brand-block { display:flex; align-items:center; gap:12px; }
+.pz-anchor { font-size:28px; }
+.pz-brand-name { font-size:22px; font-weight:800; letter-spacing:.14em; color:#fff; }
+.pz-brand-sub { font-size:9px; letter-spacing:.2em; color:rgba(255,255,255,.75); text-transform:uppercase; font-family:'JetBrains Mono',monospace; }
+.pz-meta { text-align:right; }
+.pz-fecha { font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(255,255,255,.9); font-weight:700; }
+.pz-stats { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,.7); margin-top:3px; }
+.pz-canvas-wrap { width:100%; line-height:0; background:#90d4ea; }
+.pz-canvas-wrap canvas { width:100% !important; height:auto !important; display:block; }
+.pz-tabla-wrap { padding:10px 18px 6px; }
+.pz-tabla-titulo { font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#0f2d3a; margin-bottom:6px; padding-bottom:4px; border-bottom:2px solid #0e9e6e; }
+.pz-tabla { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:10px; }
+.pz-tabla th { background:#eef8fc; color:#2a5566; font-weight:700; font-size:9px; letter-spacing:.1em; text-transform:uppercase; padding:5px 10px; text-align:left; border-bottom:2px solid #a8d8ea; }
+.pz-tabla td { padding:5px 10px; color:#0f2d3a; border-bottom:1px solid #e4f2f8; vertical-align:middle; }
 .pz-tabla tr:nth-child(even) td { background:#f8fdff; }
-.pz-color-dot { width:12px; height:12px; border-radius:2px; display:inline-block; vertical-align:middle; }
+.pz-color-dot { width:10px; height:10px; border-radius:2px; display:inline-block; vertical-align:middle; margin-right:6px; }
+.pz-cabo-tag { display:inline-block; background:#fff3e8; color:#c04000; border:1px solid #ffb080; border-radius:3px; padding:1px 5px; font-size:9px; margin:1px 2px; }
+.pz-footer { font-family:'JetBrains Mono',monospace; font-size:8px; color:#aaa; text-align:center; padding:4px; border-top:1px solid #e0e0e0; }
 
-/* ============ @MEDIA PRINT ============ */
+/* ============================================================
+   @MEDIA PRINT
+============================================================ */
 @media print {
   @page { size: A3 landscape; margin: 0; }
-  * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; box-shadow:none !important; }
-
-  /* Ocultar todo menos printZone */
-  #appScreen { display:none !important; }
-  #printZone { display:block !important; width:100%; }
-
-  .pz-header { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
-  .pz-muelle-wrap canvas { max-width:100%; }
+  * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; box-shadow:none !important; animation:none !important; transition:none !important; }
+  #appScreen  { display:none !important; }
+  #printZone  { display:block !important; width:100%; font-family:'Syne','Segoe UI',sans-serif; }
+  .pz-header { -webkit-print-color-adjust:exact !important; }
+  .pz-tabla th,
+  .pz-tabla tr:nth-child(even) td,
+  .pz-cabo-tag,
+  .pz-color-dot { -webkit-print-color-adjust:exact !important; }
 }

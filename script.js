@@ -713,232 +713,537 @@ function abrirModalEditar(obj){
    - Print: mostramos el canvas en #printZone y llamamos window.print()
    - Imagen: descargamos directamente el canvas como PNG
 ============================================================ */
-function renderizarCanvas(callback){
-  const canvas=$('#printCanvas');
-  const zona=$('#zonaBuques');
-  const muelle=$('#muelle');
-  const zonaR=zona.getBoundingClientRect();
-  const muelleR=muelle.getBoundingClientRect();
+/* ============================================================
+   RENDER CANVAS — usado para preview y para impresión
+   canvasEl: el elemento canvas donde dibujar
+   aguaH: altura del agua en px (recortada)
+   muelleH: altura del muelle en px
+   escalaFactor: multiplicador de escala (1 = igual que pantalla)
+============================================================ */
+function renderCanvas(canvasEl, aguaH, muelleH){
+  const escala = getEscala();
+  const W = $('#zonaBuques').clientWidth;
+  const DPR = 2;
 
-  const W=Math.round(zonaR.width);
-  const H=Math.round(zonaR.height+muelleR.height);
-  const DPR=2; // alta resolución
+  canvasEl.width  = W * DPR;
+  canvasEl.height = (aguaH + muelleH) * DPR;
+  canvasEl.style.width  = W + 'px';
+  canvasEl.style.height = (aguaH + muelleH) + 'px';
 
-  canvas.width=W*DPR;
-  canvas.height=H*DPR;
-  canvas.style.width=W+'px';
-  canvas.style.height=H+'px';
+  const ctx = canvasEl.getContext('2d');
+  ctx.scale(DPR, DPR);
 
-  const ctx=canvas.getContext('2d');
-  ctx.scale(DPR,DPR);
+  // ---- AGUA ----
+  const gradAgua = ctx.createLinearGradient(0, 0, 0, aguaH);
+  gradAgua.addColorStop(0,   '#c2ecf8');
+  gradAgua.addColorStop(0.5, '#7bc8e0');
+  gradAgua.addColorStop(1,   '#52b0cc');
+  ctx.fillStyle = gradAgua;
+  ctx.fillRect(0, 0, W, aguaH);
 
-  // --- Fondo agua ---
-  const gradAgua=ctx.createLinearGradient(0,0,0,H);
-  gradAgua.addColorStop(0,'#c2ecf8');
-  gradAgua.addColorStop(0.35,'#90d4ea');
-  gradAgua.addColorStop(0.7,'#62bcd8');
-  gradAgua.addColorStop(1,'#4aaecc');
-  ctx.fillStyle=gradAgua;
-  ctx.fillRect(0,0,W,zonaR.height);
+  // Ondas sutiles
+  ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+  ctx.lineWidth = 1.5;
+  for(let y = 0; y < aguaH; y += 28){
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
 
-  // Ondas (líneas horizontales sutiles)
-  ctx.strokeStyle='rgba(255,255,255,0.10)';
-  ctx.lineWidth=2;
-  for(let y=0;y<zonaR.height;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-
-  // --- Buques ---
-  const escala=getEscala();
-  buques.forEach(obj=>{
-    const elR=obj.el.getBoundingClientRect();
-    const x=elR.left-zonaR.left;
-    const y=elR.top-zonaR.top;
-    const w=elR.width, h=elR.height;
+  // ---- BUQUES ----
+  // offsetY: los buques están pegados al fondo de zona-buques
+  // en el canvas, el fondo del agua = aguaH
+  buques.forEach(obj => {
+    const bw = obj.metros * escala;
+    const bh = Math.max(30, Math.round(obj.manga * escala));
+    const bx = (obj.leftM || 0) * escala;
+    const by = aguaH - bh; // pegado al borde inferior del agua
 
     // Sombra
-    ctx.shadowColor='rgba(0,0,0,0.25)';ctx.shadowBlur=10;ctx.shadowOffsetY=4;
+    ctx.shadowColor = 'rgba(0,0,0,0.28)';
+    ctx.shadowBlur  = 10;
+    ctx.shadowOffsetY = 4;
 
-    // Casco con forma redondeada
-    // Estribor: popa izq cuadrada, proa der redondeada
-    // Babor:    popa der cuadrada, proa izq redondeada
-    const r=Math.min(h/2, w*0.12);
+    // Forma del casco
+    const r = Math.min(bh / 2, bw * 0.12);
     ctx.beginPath();
-    if(obj.orientacion==='babor'){
-      // proa izquierda
-      ctx.moveTo(x+w,y);
-      ctx.lineTo(x+r,y);
-      ctx.arc(x+r,y+h/2,r,Math.PI*1.5,Math.PI*0.5,true);
-      ctx.lineTo(x+w,y+h);
-      ctx.closePath();
+    if(obj.orientacion === 'babor'){
+      ctx.moveTo(bx + bw, by);
+      ctx.lineTo(bx + r,  by);
+      ctx.arc(bx + r, by + bh/2, r, Math.PI*1.5, Math.PI*0.5, true);
+      ctx.lineTo(bx + bw, by + bh);
     } else {
-      // proa derecha
-      ctx.moveTo(x,y);
-      ctx.lineTo(x+w-r,y);
-      ctx.arc(x+w-r,y+h/2,r,Math.PI*1.5,Math.PI*0.5,false);
-      ctx.lineTo(x,y+h);
-      ctx.closePath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + bw - r, by);
+      ctx.arc(bx + bw - r, by + bh/2, r, Math.PI*1.5, Math.PI*0.5, false);
+      ctx.lineTo(bx, by + bh);
     }
+    ctx.closePath();
 
-    const grad=ctx.createLinearGradient(x,y,x+w,y+h);
-    grad.addColorStop(0,obj.color);
-    grad.addColorStop(1,darken(obj.color,22));
-    ctx.fillStyle=grad;
+    const grad = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
+    grad.addColorStop(0, obj.color);
+    grad.addColorStop(1, darken(obj.color, 22));
+    ctx.fillStyle = grad;
     ctx.fill();
-    ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-    // Texto nombre
-    ctx.fillStyle='rgba(255,255,255,0.95)';
-    ctx.font=`bold ${Math.max(10,h*0.22)}px Syne,sans-serif`;
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
-    ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=3;
-    ctx.fillText(obj.nombre,x+w/2,y+h/2-4);
-    ctx.font=`${Math.max(8,h*0.16)}px "JetBrains Mono",monospace`;
-    ctx.fillStyle='rgba(255,255,255,0.65)';
-    ctx.fillText(`${obj.metros}m`,x+w/2,y+h/2+h*0.2);
-    ctx.shadowBlur=0;
+    // Highlight superior
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(bx + 4, by + 2, bw - 8, bh * 0.3);
+
+    // Casillería (lado popa)
+    const casW = bw * 0.18, casH = bh * 0.62;
+    const casX = obj.orientacion === 'babor' ? bx + bw - casW - 8 : bx + 8;
+    const casY = by + bh * 0.19;
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillRect(casX, casY, casW, casH);
+    // grid de casillas
+    ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+    ctx.lineWidth = 0.5;
+    for(let ci = 1; ci < 3; ci++){
+      ctx.beginPath(); ctx.moveTo(casX + casW*ci/3, casY); ctx.lineTo(casX + casW*ci/3, casY + casH); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(casX, casY + casH/2); ctx.lineTo(casX + casW, casY + casH/2); ctx.stroke();
+
+    // Puente (lado proa)
+    const pW = bw * 0.08, pH = bh * 0.60;
+    const pX = obj.orientacion === 'babor' ? bx + 10 : bx + bw - pW - 10;
+    const pY = by + bh * 0.20;
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.fillRect(pX, pY, pW, pH);
+    // ventana
+    ctx.fillStyle = 'rgba(255,235,140,0.85)';
+    ctx.fillRect(pX + pW*0.2, pY + pH*0.25, pW*0.6, pH*0.25);
+
+    // Nombre del buque
+    const fontSize = Math.max(9, Math.min(14, bh * 0.24));
+    ctx.fillStyle = 'rgba(255,255,255,0.97)';
+    ctx.font = `bold ${fontSize}px Syne, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 3;
+    ctx.fillText(obj.nombre, bx + bw/2, by + bh/2 - fontSize*0.3);
+    ctx.font = `${Math.max(7, fontSize*0.72)}px "JetBrains Mono", monospace`;
+    ctx.fillStyle = 'rgba(255,255,255,0.60)';
+    ctx.fillText(`${obj.metros}m · ${obj.manga}m manga`, bx + bw/2, by + bh/2 + fontSize*0.7);
+    ctx.shadowBlur = 0;
   });
 
-  // --- Cabos ---
-  ctx.strokeStyle='#ff6600';
-  ctx.lineWidth=2;
-  ctx.lineCap='round';
-  ctx.shadowColor='rgba(255,100,0,0.4)';ctx.shadowBlur=4;
-  cabos.forEach(cabo=>{
-    const obj=buques.find(b=>b.id===cabo.buqueId);
-    if(!obj)return;
-    const elR=obj.el.getBoundingClientRect();
-    const px=(elR.left-zonaR.left)+cabo.pctX*elR.width;
-    const py=(elR.top-zonaR.top)+cabo.pctY*elR.height;
-    const bitaData=BITAS.find(b=>b.num===cabo.bitaNum);
-    if(!bitaData)return;
-    const bx=bitaData.pos*escala;
-    const by=zonaR.height+10; // top del muelle
-    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(bx,by);ctx.stroke();
+  // ---- CABOS ----
+  ctx.strokeStyle = '#ff6600';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.shadowColor = 'rgba(255,100,0,0.45)';
+  ctx.shadowBlur  = 4;
+  cabos.forEach(cabo => {
+    const obj = buques.find(b => b.id === cabo.buqueId);
+    if(!obj) return;
+    const bw = obj.metros * escala;
+    const bh = Math.max(30, Math.round(obj.manga * escala));
+    const bx = (obj.leftM || 0) * escala;
+    const by = aguaH - bh;
+    // punto en el buque
+    const px = bx + cabo.pctX * bw;
+    const py = by + cabo.pctY * bh;
+    // punto en la bita (tope del muelle)
+    const bitaData = BITAS.find(b => b.num === cabo.bitaNum);
+    if(!bitaData) return;
+    const qx = bitaData.pos * escala;
+    const qy = aguaH + 10; // tope del muelle
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(qx, qy); ctx.stroke();
     // punto de amarre
-    ctx.fillStyle='#ff6600';ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle = '#ff6600';
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI*2); ctx.fill();
   });
-  ctx.shadowBlur=0;
+  ctx.shadowBlur = 0;
 
-  // --- Muelle ---
-  const my=zonaR.height;
-  // Borde agua-muelle
-  const gradEspuma=ctx.createLinearGradient(0,my,0,my+10);
-  gradEspuma.addColorStop(0,'rgba(74,174,204,0.5)');
-  gradEspuma.addColorStop(1,'transparent');
-  ctx.fillStyle=gradEspuma;ctx.fillRect(0,my,W,10);
+  // ---- MUELLE ----
+  const my = aguaH;
+  // Espuma borde
+  const gradEsp = ctx.createLinearGradient(0, my, 0, my + 10);
+  gradEsp.addColorStop(0, 'rgba(74,174,204,0.55)');
+  gradEsp.addColorStop(1, 'transparent');
+  ctx.fillStyle = gradEsp;
+  ctx.fillRect(0, my, W, 10);
 
-  // Tablones de madera
-  const gradMadera=ctx.createLinearGradient(0,my+10,0,my+muelleR.height);
-  gradMadera.addColorStop(0,'#caba90');
-  gradMadera.addColorStop(0.4,'#b8a478');
-  gradMadera.addColorStop(1,'#a08858');
-  ctx.fillStyle=gradMadera;ctx.fillRect(0,my+10,W,muelleR.height-10);
-  ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=1;
-  for(let x2=0;x2<W;x2+=30){ctx.beginPath();ctx.moveTo(x2,my+10);ctx.lineTo(x2,my+muelleR.height);ctx.stroke();}
+  // Tablones
+  const gradMad = ctx.createLinearGradient(0, my + 10, 0, my + muelleH);
+  gradMad.addColorStop(0,   '#caba90');
+  gradMad.addColorStop(0.4, '#b8a478');
+  gradMad.addColorStop(1,   '#a08858');
+  ctx.fillStyle = gradMad;
+  ctx.fillRect(0, my + 10, W, muelleH - 10);
+
+  // Líneas verticales tablones
+  ctx.strokeStyle = 'rgba(0,0,0,0.055)';
+  ctx.lineWidth = 1;
+  for(let x2 = 0; x2 < W; x2 += 30){
+    ctx.beginPath(); ctx.moveTo(x2, my+10); ctx.lineTo(x2, my+muelleH); ctx.stroke();
+  }
+  // Líneas horizontales tablones
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  for(let y2 = my+10; y2 < my+muelleH; y2 += 12){
+    ctx.beginPath(); ctx.moveTo(0, y2); ctx.lineTo(W, y2); ctx.stroke();
+  }
 
   // Borde superior muelle
-  ctx.fillStyle='#7a6030';ctx.fillRect(0,my+10,W,4);
+  ctx.fillStyle = '#7a6030';
+  ctx.fillRect(0, my + 10, W, 3);
 
-  // Bitas — dibujadas DENTRO del muelle (palo hacia abajo desde el borde superior)
-  BITAS.forEach(b=>{
-    const bx=b.pos*escala;
-    const bitaTopY=my+14; // tope del palo: justo dentro del borde superior del muelle
-    const palH=18;
-    const cr=b.cap===250?6:b.cap===150?5:4;
-    // Palo (hacia abajo)
-    ctx.strokeStyle=b.cap===250?'#c0392b':b.cap===150?'#7a6030':'#b0a080';
-    ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(bx,bitaTopY);ctx.lineTo(bx,bitaTopY+palH);ctx.stroke();
-    // Cabeza (en la punta inferior del palo)
-    const bc=b.cap===250?'#e05040':b.cap===150?'#aaa':'#ccc';
-    ctx.fillStyle=bc;ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=3;
-    ctx.beginPath();ctx.arc(bx,bitaTopY+palH,cr,0,Math.PI*2);ctx.fill();
+  // ---- BITAS ----
+  BITAS.forEach(b => {
+    const bx      = b.pos * escala;
+    const topY    = my + 14;
+    const palH    = 16;
+    const cr      = b.cap===250 ? 6 : b.cap===150 ? 5 : 4;
+    const palColor = b.cap===250 ? '#b02020' : b.cap===150 ? '#6a5020' : '#a09070';
+    const headColor = b.cap===250 ? '#e04030' : b.cap===150 ? '#aaa' : '#ccc';
+    const txtColor  = b.cap===250 ? '#901010' : b.cap===150 ? 'rgba(55,35,5,0.7)' : 'rgba(55,35,5,0.42)';
+
+    // Palo
+    ctx.strokeStyle = palColor; ctx.lineWidth = b.cap===250 ? 2.5 : 2;
+    ctx.beginPath(); ctx.moveTo(bx, topY); ctx.lineTo(bx, topY+palH); ctx.stroke();
+    // Cabeza
+    ctx.fillStyle = headColor;
+    ctx.shadowColor='rgba(0,0,0,0.25)'; ctx.shadowBlur=2;
+    ctx.beginPath(); ctx.arc(bx, topY+palH, cr, 0, Math.PI*2); ctx.fill();
     ctx.shadowBlur=0;
-    // Número debajo de la cabeza
-    ctx.fillStyle=b.cap===250?'#a02020':b.cap===150?'rgba(55,35,5,0.7)':'rgba(55,35,5,0.45)';
-    ctx.font=`bold ${b.cap===250?10:9}px "JetBrains Mono",monospace`;
-    ctx.textAlign='center';ctx.textBaseline='top';
-    ctx.fillText(String(b.num),bx,bitaTopY+palH+cr+2);
+    // Número
+    ctx.fillStyle  = txtColor;
+    ctx.font       = `bold ${b.cap===250?10:9}px "JetBrains Mono",monospace`;
+    ctx.textAlign  = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(String(b.num), bx, topY+palH+cr+2);
   });
 
-  // Labels zona
-  ctx.fillStyle='rgba(70,45,5,0.5)';ctx.font='bold 9px "JetBrains Mono",monospace';ctx.textAlign='left';
-  ctx.fillText('◀ 212 — 201',16,my+muelleR.height-18);
-  ctx.textAlign='right';ctx.fillText('201 — 10 ▶',W-50,my+muelleR.height-18);
+  // ---- REGLA DE ESCALA ----
+  // Dibujamos una regla cada 50m en el borde inferior del muelle
+  ctx.fillStyle = 'rgba(70,45,5,0.45)';
+  ctx.font = '8px "JetBrains Mono",monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  for(let m = 0; m <= MUELLE_METROS_TOTAL; m += 50){
+    const rx = m * escala;
+    ctx.fillStyle = 'rgba(100,70,10,0.35)';
+    ctx.fillRect(rx, my + muelleH - 14, 1, 8);
+    ctx.fillStyle = 'rgba(70,45,5,0.45)';
+    ctx.textAlign = m===0 ? 'left' : 'center';
+    ctx.fillText(m+'m', rx + (m===0?2:0), my + muelleH - 1);
+  }
 
-  if(callback)callback(canvas);
+  // Labels zonas
+  ctx.fillStyle = 'rgba(70,45,5,0.4)';
+  ctx.font = 'bold 8px "JetBrains Mono",monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('◀ 212 — 201', 14, my + 4);
+  ctx.textAlign = 'right';
+  ctx.fillText('201 — 10 ▶', W - 40, my + 4);
 }
 
+/* ============================================================
+   INIT IMPRIMIR
+============================================================ */
 (function initImprimir(){
-  const btn=$('#btnImprimir'),overlay=$('#overlayImprimir'),modal=$('#modalImprimir'),close=$('#closeImprimir');
-  function abrir(){overlay.style.display='block';modal.style.display='block';requestAnimationFrame(()=>{overlay.classList.add('visible');modal.classList.add('visible');});}
-  function cerrar(){overlay.classList.remove('visible');modal.classList.remove('visible');setTimeout(()=>{overlay.style.display='none';modal.style.display='none';},230);}
-  btn?.addEventListener('click',abrir);
-  close?.addEventListener('click',cerrar);
-  overlay?.addEventListener('click',cerrar);
+  const btn=$('#btnImprimir');
 
-  // IMPRIMIR
-  $('#btnPrintDirect')?.addEventListener('click',()=>{
-    cerrar();
-    mostrarToast('🖨️ Preparando impresión...');
+  function imprimir(){
+    mostrarToast('🖨️ Preparando...');
     setTimeout(()=>{
-      // Construir zona print
       prepararPrintZone();
-      setTimeout(()=>window.print(),300);
-    },300);
-  });
+      setTimeout(()=>window.print(), 400);
+    }, 200);
+  }
 
-  // GUARDAR IMAGEN
-  $('#btnPrintImg')?.addEventListener('click',()=>{
-    cerrar();
-    mostrarToast('📸 Generando imagen...');
-    setTimeout(()=>{
-      renderizarCanvas(canvas=>{
-        const link=document.createElement('a');
-        link.download=`docksim-${new Date().toISOString().slice(0,16).replace('T','_')}.png`;
-        link.href=canvas.toDataURL('image/png');
-        link.click();
-        mostrarToast('✓ Imagen descargada');
-      });
-    },200);
+  btn?.addEventListener('click', imprimir);
+  document.addEventListener('keydown', e=>{
+    if((e.ctrlKey||e.metaKey) && e.key==='p'){ e.preventDefault(); imprimir(); }
   });
-
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('visible'))cerrar();});
 })();
 
-function prepararPrintZone(){
-  // Fecha
-  const now=new Date();
-  const fecha=`${now.toLocaleDateString('es-UY')} ${now.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'})}`;
-  $('#pzFecha').textContent=fecha;
+/* ============================================================
+   RENDER CANVAS PARA IMPRESIÓN
+   Dibuja: agua recortada + buques + cabos + muelle + bitas + escala
+============================================================ */
+function renderizarCanvas(){
+  const canvas = $('#printCanvas');
+  const zona   = $('#zonaBuques');
+  const muelle = $('#muelle');
+  const zonaR  = zona.getBoundingClientRect();
+  const muelleR= muelle.getBoundingClientRect();
+  const escala = getEscala();
 
-  // Renderizar canvas del muelle
-  renderizarCanvas(()=>{});
+  // Calcular el buque más alto para recortar el agua
+  const alturaMaxBuque = buques.reduce((max, obj)=>{
+    return Math.max(max, Math.max(30, Math.round(obj.manga * escala)));
+  }, 60);
+  // Mostrar solo el agua necesaria: altura del buque más alto + margen
+  const aguaVisible = alturaMaxBuque + 30;
+  const muelleH    = muelleR.height;
+  const W = Math.round(zonaR.width);
+  const H = aguaVisible + muelleH;
+  const DPR = 2;
+
+  canvas.width  = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+
+  // ── AGUA ──
+  const gradAgua = ctx.createLinearGradient(0, 0, 0, aguaVisible);
+  gradAgua.addColorStop(0,   '#c2ecf8');
+  gradAgua.addColorStop(0.4, '#90d4ea');
+  gradAgua.addColorStop(1,   '#62bcd8');
+  ctx.fillStyle = gradAgua;
+  ctx.fillRect(0, 0, W, aguaVisible);
+
+  // Ondas sutiles
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 1.5;
+  for(let y=0; y<aguaVisible; y+=28){
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+
+  // ── BUQUES ──
+  // Los buques tienen bottom:0 en zona-buques → Y = aguaVisible - buqueH
+  buques.forEach(obj=>{
+    const buqueW = obj.metros * escala;
+    const buqueH = Math.max(30, Math.round(obj.manga * escala));
+    const x      = (obj.leftM || 0) * escala;
+    const y      = aguaVisible - buqueH;
+    const r      = Math.min(buqueH / 2, buqueW * 0.12);
+
+    // Sombra
+    ctx.shadowColor   = 'rgba(0,0,0,0.28)';
+    ctx.shadowBlur    = 10;
+    ctx.shadowOffsetY = 4;
+
+    // Forma del casco
+    ctx.beginPath();
+    if(obj.orientacion === 'babor'){
+      ctx.moveTo(x + buqueW, y);
+      ctx.lineTo(x + r, y);
+      ctx.arc(x + r, y + buqueH/2, r, Math.PI*1.5, Math.PI*0.5, true);
+      ctx.lineTo(x + buqueW, y + buqueH);
+    } else {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + buqueW - r, y);
+      ctx.arc(x + buqueW - r, y + buqueH/2, r, Math.PI*1.5, Math.PI*0.5, false);
+      ctx.lineTo(x, y + buqueH);
+    }
+    ctx.closePath();
+
+    const grad = ctx.createLinearGradient(x, y, x + buqueW, y + buqueH);
+    grad.addColorStop(0, obj.color);
+    grad.addColorStop(1, darken(obj.color, 22));
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+    // Casillería (popa)
+    const casW = buqueW * 0.20;
+    const casX = obj.orientacion === 'babor' ? x + buqueW - casW - 6 : x + 6;
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillRect(casX, y + buqueH * 0.15, casW, buqueH * 0.7);
+    // Grid
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 0.5;
+    for(let col=1; col<3; col++){
+      const cx = casX + casW * col / 3;
+      ctx.beginPath(); ctx.moveTo(cx, y + buqueH*0.15); ctx.lineTo(cx, y + buqueH*0.85); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(casX, y + buqueH*0.5); ctx.lineTo(casX+casW, y + buqueH*0.5); ctx.stroke();
+
+    // Puente (proa)
+    const pteW = buqueW * 0.09;
+    const pteX = obj.orientacion === 'babor' ? x + 6 : x + buqueW - pteW - 6;
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.fillRect(pteX, y + buqueH * 0.18, pteW, buqueH * 0.64);
+    // Ventana
+    ctx.fillStyle = 'rgba(255,235,100,0.85)';
+    ctx.fillRect(pteX + pteW*0.25, y + buqueH*0.38, pteW*0.5, buqueH*0.18);
+
+    // Nombre
+    const fontSize = Math.max(9, Math.min(14, buqueH * 0.22));
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.font = `bold ${fontSize}px Syne,sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 3;
+    ctx.fillText(obj.nombre, x + buqueW/2, y + buqueH/2 - fontSize*0.4);
+    const subSize = Math.max(7, fontSize * 0.7);
+    ctx.font = `${subSize}px "JetBrains Mono",monospace`;
+    ctx.fillStyle = 'rgba(255,255,255,0.62)';
+    ctx.fillText(`${obj.metros}m · ${obj.manga}m manga`, x + buqueW/2, y + buqueH/2 + subSize);
+    ctx.shadowBlur = 0;
+  });
+
+  // ── CABOS ──
+  ctx.strokeStyle = '#ff6600';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.shadowColor = 'rgba(255,100,0,0.45)'; ctx.shadowBlur = 5;
+
+  cabos.forEach(cabo=>{
+    const obj = buques.find(b => b.id === cabo.buqueId);
+    if(!obj) return;
+    const buqueW = obj.metros * escala;
+    const buqueH = Math.max(30, Math.round(obj.manga * escala));
+    const buqueX = (obj.leftM || 0) * escala;
+    const buqueY = aguaVisible - buqueH;
+
+    // Punto en el buque
+    const px = buqueX + cabo.pctX * buqueW;
+    const py = buqueY + cabo.pctY * buqueH;
+
+    // Posición de la bita en el canvas
+    const bitaData = BITAS.find(b => b.num === cabo.bitaNum);
+    if(!bitaData) return;
+    const bx = bitaData.pos * escala;
+    const by = aguaVisible + 14; // dentro del muelle
+
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(bx, by); ctx.stroke();
+
+    // Punto de amarre
+    ctx.fillStyle = '#ff6600';
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.shadowBlur = 0;
+
+  // ── MUELLE ──
+  const my = aguaVisible;
+
+  // Espuma borde agua
+  const gradEsp = ctx.createLinearGradient(0, my, 0, my+10);
+  gradEsp.addColorStop(0, 'rgba(74,174,204,0.5)');
+  gradEsp.addColorStop(1, 'transparent');
+  ctx.fillStyle = gradEsp; ctx.fillRect(0, my, W, 10);
+
+  // Madera
+  const gradMad = ctx.createLinearGradient(0, my+10, 0, my+muelleH);
+  gradMad.addColorStop(0,   '#caba90');
+  gradMad.addColorStop(0.4, '#b8a478');
+  gradMad.addColorStop(1,   '#a08858');
+  ctx.fillStyle = gradMad; ctx.fillRect(0, my+10, W, muelleH-10);
+
+  // Tablones verticales
+  ctx.strokeStyle = 'rgba(0,0,0,0.055)'; ctx.lineWidth = 1;
+  for(let x=0; x<W; x+=30){
+    ctx.beginPath(); ctx.moveTo(x, my+10); ctx.lineTo(x, my+muelleH); ctx.stroke();
+  }
+
+  // Borde superior muelle
+  ctx.fillStyle = '#7a6030'; ctx.fillRect(0, my+10, W, 4);
+
+  // ── BITAS ──
+  BITAS.forEach(b=>{
+    const bx = b.pos * escala;
+    const topY = my + 14;
+    const palH = 16;
+    const cr   = b.cap===250 ? 6 : b.cap===150 ? 5 : 4;
+
+    // Palo
+    ctx.strokeStyle = b.cap===250 ? '#c0392b' : b.cap===150 ? '#7a6030' : '#b0a080';
+    ctx.lineWidth   = b.cap===250 ? 2.5 : 2;
+    ctx.beginPath(); ctx.moveTo(bx, topY); ctx.lineTo(bx, topY+palH); ctx.stroke();
+
+    // Cabeza
+    const bc = b.cap===250 ? '#e05040' : b.cap===150 ? '#999' : '#bbb';
+    ctx.fillStyle   = bc;
+    ctx.shadowColor = 'rgba(0,0,0,0.25)'; ctx.shadowBlur = 3;
+    ctx.beginPath(); ctx.arc(bx, topY+palH, cr, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur  = 0;
+
+    // Número
+    ctx.fillStyle     = b.cap===250 ? '#a02020' : b.cap===150 ? 'rgba(55,35,5,0.65)' : 'rgba(55,35,5,0.38)';
+    ctx.font          = `bold ${b.cap===250?10:9}px "JetBrains Mono",monospace`;
+    ctx.textAlign     = 'center';
+    ctx.textBaseline  = 'top';
+    ctx.fillText(String(b.num), bx, topY+palH+cr+2);
+  });
+
+  // ── REGLA DE ESCALA ──
+  const reglaY = my + muelleH - 14;
+  ctx.fillStyle   = 'rgba(70,45,5,0.45)';
+  ctx.font        = 'bold 8px "JetBrains Mono",monospace';
+  ctx.textAlign   = 'left';
+  ctx.textBaseline= 'middle';
+  ctx.fillText('◀ 212 — 201', 14, reglaY);
+  ctx.textAlign = 'right';
+  ctx.fillText('201 — 10 ▶', W - 14, reglaY);
+
+  // Línea de escala con marcas cada 50m
+  const reglaLineY = my + muelleH - 4;
+  ctx.strokeStyle = 'rgba(70,45,5,0.2)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, reglaLineY); ctx.lineTo(W, reglaLineY); ctx.stroke();
+  for(let m=0; m<=MUELLE_METROS_TOTAL; m+=50){
+    const rx = m * escala;
+    ctx.strokeStyle = 'rgba(70,45,5,0.3)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(rx, reglaLineY-3); ctx.lineTo(rx, reglaLineY+3); ctx.stroke();
+    ctx.fillStyle   = 'rgba(70,45,5,0.4)';
+    ctx.font        = '7px "JetBrains Mono",monospace';
+    ctx.textAlign   = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(m+'m', rx, reglaLineY-4);
+  }
+}
+
+/* ============================================================
+   PREPARAR ZONA DE IMPRESIÓN
+============================================================ */
+function prepararPrintZone(){
+  const now   = new Date();
+  const fecha = `${now.toLocaleDateString('es-UY',{weekday:'long',year:'numeric',month:'long',day:'numeric'})} — ${now.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'})}`;
+  const fechaCorta = `${now.toLocaleDateString('es-UY')} ${now.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'})}`;
+
+  $('#pzFecha').textContent       = fecha;
+  $('#pzFechaFooter').textContent = fechaCorta;
+
+  // Stats
+  const nBuques = buques.length;
+  const nCabos  = cabos.length;
+  const metros  = buques.reduce((s,b) => s + b.metros, 0);
+  $('#pzStats').textContent = `${nBuques} buque${nBuques!==1?'s':''} · ${nCabos} cabo${nCabos!==1?'s':''} · ${metros.toFixed(0)} m ocupados`;
+
+  // Renderizar canvas
+  renderizarCanvas();
 
   // Tabla
-  const tbody=$('#pzTablaBody');
-  tbody.innerHTML='';
-  buques.forEach((obj,i)=>{
-    const misCabos=cabos.filter(c=>c.buqueId===obj.id);
-    const cabosStr=misCabos.length===0?'—':misCabos.map(c=>{
-      const z=c.pctX<0.3?(obj.orientacion==='babor'?'Popa':'Proa'):c.pctX>0.7?(obj.orientacion==='babor'?'Proa':'Popa'):'Centro';
-      return `${z}→${c.bitaNum}`;
-    }).join(' · ');
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td>${i+1}</td>
-      <td><span class="pz-color-dot" style="background:${obj.color};margin-right:6px"></span><strong>${obj.nombre}</strong></td>
+  const tbody = $('#pzTablaBody');
+  tbody.innerHTML = '';
+  buques.forEach((obj, i)=>{
+    const misCabos = cabos.filter(c => c.buqueId === obj.id);
+    const cabosTags = misCabos.length === 0
+      ? '<span style="color:#aaa">—</span>'
+      : misCabos.map(c=>{
+          const z = c.pctX < 0.3
+            ? (obj.orientacion==='babor' ? 'Popa' : 'Proa')
+            : c.pctX > 0.7
+            ? (obj.orientacion==='babor' ? 'Proa' : 'Popa')
+            : 'Centro';
+          return `<span class="pz-cabo-tag">${z} → ${c.bitaNum}</span>`;
+        }).join('');
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:#888;font-size:9px">${i+1}</td>
+      <td><span class="pz-color-dot" style="background:${obj.color}"></span><strong>${obj.nombre}</strong></td>
       <td>${obj.orientacion.charAt(0).toUpperCase()+obj.orientacion.slice(1)}</td>
       <td>${obj.metros} m</td>
       <td>${obj.manga} m</td>
       <td>${obj.bitaDesde} → ${obj.bitaHasta}</td>
-      <td>${cabosStr}</td>`;
+      <td>${cabosTags}</td>`;
     tbody.appendChild(tr);
   });
 }
 
-/* Después de print, limpiar */
-window.addEventListener('afterprint',()=>{});
+/* Después de print */
+window.addEventListener('afterprint', ()=>{});
+
 
 /* ============================================================
    TOAST

@@ -26,7 +26,7 @@
         <span class="header-hint">Ctrl + clic sobre buque = punto de amarre</span>
       </div>
       <div class="header-actions">
-        <button class="btn-print" id="btnImprimir" title="Exportar / Imprimir">🖨️</button>
+        <button class="btn-print" id="btnImprimir" title="Imprimir / PDF">🖨️</button>
         <button class="btn-add" id="btnAgregarBuque">
           <span class="btn-add-icon">＋</span>
           <span>Nuevo Buque</span>
@@ -49,7 +49,7 @@
       </div>
     </main>
 
-    <!-- Panel info flotante (tooltip fijo arriba izq) -->
+    <!-- Panel info flotante -->
     <div class="panel-info-flotante" id="panelInfoFlotante">
       <div class="pif-header">
         <span class="pif-icon" id="pifIcon">🚢</span>
@@ -80,7 +80,7 @@
 
     <!-- Panel flotante buques -->
     <div class="panel-flotante" id="panelFlotante">
-      <div class="panel-header" id="panelHeader">
+      <div class="panel-header">
         <span class="panel-title">🚢 Buques en muelle</span>
         <button class="panel-toggle" id="panelToggle">▼</button>
       </div>
@@ -183,55 +183,49 @@
       </div>
     </div>
 
-    <!-- Modal imprimir -->
-    <div class="overlay" id="overlayImprimir"></div>
-    <div class="modal" id="modalImprimir">
-      <div class="modal-header">
-        <h2 class="modal-title">🖨️ Exportar / Imprimir</h2>
-        <button class="modal-close" id="closeImprimir">✕</button>
-      </div>
-      <div class="modal-body">
-        <p class="print-desc">Genera un snapshot del estado actual con todos los buques y cabos.</p>
-        <div class="print-options">
-          <button class="print-opt-btn" id="btnPrintDirect">
-            <span class="print-opt-icon">🖨️</span>
-            <div>
-              <span class="print-opt-label">Imprimir / Guardar PDF</span>
-              <span class="print-opt-sub">Abre el diálogo de impresión del navegador</span>
-            </div>
-          </button>
-          <button class="print-opt-btn" id="btnPrintImg">
-            <span class="print-opt-icon">🖼️</span>
-            <div>
-              <span class="print-opt-label">Guardar como imagen PNG</span>
-              <span class="print-opt-sub">Descarga un PNG del muelle con buques y cabos</span>
-            </div>
-          </button>
-        </div>
-      </div>
-    </div>
-
     <div class="toast" id="toast"></div>
   </div>
 
-  <!-- ===================== ZONA DE IMPRESION ===================== -->
-  <!-- Este div solo se ve al imprimir, se construye dinámicamente desde JS -->
-  <div id="printZone" style="display:none">
+  <!-- ===================== ZONA DE IMPRESIÓN ===================== -->
+  <div id="printZone">
     <div class="pz-header">
-      <div class="pz-brand">⚓ DOCKSIM — Simulador de Atraque · Muelle Escala</div>
-      <div class="pz-fecha" id="pzFecha"></div>
+      <div class="pz-brand-block">
+        <span class="pz-anchor">⚓</span>
+        <div>
+          <div class="pz-brand-name">DOCKSIM</div>
+          <div class="pz-brand-sub">Simulador de Atraque · Muelle Escala</div>
+        </div>
+      </div>
+      <div class="pz-meta">
+        <div class="pz-fecha" id="pzFecha"></div>
+        <div class="pz-stats" id="pzStats"></div>
+      </div>
     </div>
-    <div class="pz-muelle-wrap">
+
+    <div class="pz-canvas-wrap">
       <canvas id="printCanvas"></canvas>
     </div>
+
     <div class="pz-tabla-wrap">
-      <div class="pz-tabla-titulo">Estado del Muelle</div>
+      <div class="pz-tabla-titulo">Estado del Muelle al momento de impresión</div>
       <table class="pz-tabla" id="pzTabla">
         <thead>
-          <tr><th>#</th><th>Nombre</th><th>Banda</th><th>Eslora</th><th>Manga</th><th>Bitas</th><th>Cabos</th></tr>
+          <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Banda</th>
+            <th>Eslora</th>
+            <th>Manga</th>
+            <th>Bitas</th>
+            <th>Cabos amarrados</th>
+          </tr>
         </thead>
         <tbody id="pzTablaBody"></tbody>
       </table>
+    </div>
+
+    <div class="pz-footer">
+      DockSim · Muelle Escala · Impreso el <span id="pzFechaFooter"></span>
     </div>
   </div>
 
