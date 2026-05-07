@@ -89,16 +89,12 @@ function generarBitas(){
 function calcularBitas(obj){
   const ini=parseFloat(obj.el.style.left), fin=ini+obj.el.offsetWidth;
   const domB=$$('.bita').map(b=>({num:b.dataset.num,x:b.offsetLeft}));
-  // Bita más cercana a la proa (extremo ini): la de menor distancia a ini
-  // Bita más cercana a la popa (extremo fin): la de menor distancia a fin
-  let desde='–', hasta='–', dMin=Infinity, hMin=Infinity;
-  for(const b of domB){
-    const dIni=Math.abs(b.x-ini);
-    const dFin=Math.abs(b.x-fin);
-    if(dIni<dMin){dMin=dIni; desde=b.num;}
-    if(dFin<hMin){hMin=dFin; hasta=b.num;}
-  }
-  obj.bitaDesde=desde; obj.bitaHasta=hasta;
+  // Bita más cercana a la izquierda del buque: la más próxima con x <= ini
+  // Bita más cercana a la derecha del buque: la más próxima con x >= fin
+  const izq = domB.filter(b=>b.x<=ini).sort((a,b)=>b.x-a.x)[0];
+  const der  = domB.filter(b=>b.x>=fin).sort((a,b)=>a.x-b.x)[0];
+  obj.bitaDesde = izq ? izq.num : '–';
+  obj.bitaHasta = der ? der.num : '–';
 }
 
 /* ============================================================
