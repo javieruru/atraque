@@ -183,6 +183,8 @@ function buildTablaInfoBitas(){
 function randomPastel(){return hslToHex(Math.floor(Math.random()*360),62+Math.random()*18,48+Math.random()*14);}
 function hslToHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));const hex=x=>Math.round(255*x).toString(16).padStart(2,'0');return `#${hex(f(0))}${hex(f(8))}${hex(f(4))}`;}
 function darken(hex,amt){const r=Math.max(0,parseInt(hex.slice(1,3),16)-amt),g=Math.max(0,parseInt(hex.slice(3,5),16)-amt),b=Math.max(0,parseInt(hex.slice(5,7),16)-amt);return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;}
+function lighten(hex,amt){const r=Math.min(255,parseInt(hex.slice(1,3),16)+amt),g=Math.min(255,parseInt(hex.slice(3,5),16)+amt),b=Math.min(255,parseInt(hex.slice(5,7),16)+amt);return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;}
+
 
 /* ============================================================
    COLISIONES
@@ -1039,7 +1041,7 @@ function renderizarCanvas(){
     return Math.max(max, Math.max(30, Math.round(obj.manga * escala)));
   }, 60);
   // Mostrar solo el agua necesaria: altura del buque más alto + margen
-  const aguaVisible = alturaMaxBuque + 100; // margen sobre los buques
+  const aguaVisible = alturaMaxBuque + 40; // margen sobre los buques
   const muelleH    = muelleR.height;
   const W = Math.round(zonaR.width);
   const H = aguaVisible + muelleH;
@@ -1053,17 +1055,17 @@ function renderizarCanvas(){
   const ctx = canvas.getContext('2d');
   ctx.scale(DPR, DPR);
 
-  // ── AGUA ──
+  // ── AGUA (más clara para impresión) ──
   const gradAgua = ctx.createLinearGradient(0, 0, 0, aguaVisible);
-  gradAgua.addColorStop(0,   '#c2ecf8');
-  gradAgua.addColorStop(0.4, '#90d4ea');
-  gradAgua.addColorStop(1,   '#62bcd8');
+  gradAgua.addColorStop(0,   '#e8f8fd');
+  gradAgua.addColorStop(0.4, '#cceef8');
+  gradAgua.addColorStop(1,   '#b0e0f0');
   ctx.fillStyle = gradAgua;
   ctx.fillRect(0, 0, W, aguaVisible);
 
   // Ondas sutiles
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.lineWidth = 1;
   for(let y=0; y<aguaVisible; y+=28){
     ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
   }
@@ -1099,13 +1101,18 @@ function renderizarCanvas(){
       ctx.closePath();
     }
 
-    // Pintar casco
+    // Pintar casco — color más claro + contorno fuerte
     cascoPath();
     const grad = ctx.createLinearGradient(x, y, x + buqueW, y + buqueH);
-    grad.addColorStop(0, obj.color);
-    grad.addColorStop(1, darken(obj.color, 22));
+    grad.addColorStop(0, lighten(obj.color, 30));
+    grad.addColorStop(1, lighten(obj.color, 10));
     ctx.fillStyle = grad;
     ctx.fill();
+    // Contorno
+    cascoPath();
+    ctx.strokeStyle = darken(obj.color, 35);
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
     // Clip al casco: elementos interiores no sobresalen del borde redondeado
@@ -1187,81 +1194,84 @@ function renderizarCanvas(){
   });
   ctx.shadowBlur = 0;
 
-  // ── MUELLE ──
+  // ── MUELLE (gris claro para impresión) ──
   const my = aguaVisible;
 
   // Espuma borde agua
-  const gradEsp = ctx.createLinearGradient(0, my, 0, my+10);
-  gradEsp.addColorStop(0, 'rgba(74,174,204,0.5)');
-  gradEsp.addColorStop(1, 'transparent');
-  ctx.fillStyle = gradEsp; ctx.fillRect(0, my, W, 10);
+  ctx.fillStyle = 'rgba(180,220,230,0.35)';
+  ctx.fillRect(0, my, W, 6);
 
-  // Madera
-  const gradMad = ctx.createLinearGradient(0, my+10, 0, my+muelleH);
-  gradMad.addColorStop(0,   '#caba90');
-  gradMad.addColorStop(0.4, '#b8a478');
-  gradMad.addColorStop(1,   '#a08858');
-  ctx.fillStyle = gradMad; ctx.fillRect(0, my+10, W, muelleH-10);
+  // Superficie gris clara
+  ctx.fillStyle = '#e8e8e8';
+  ctx.fillRect(0, my + 6, W, muelleH - 6);
 
-  // Tablones verticales
-  ctx.strokeStyle = 'rgba(0,0,0,0.055)'; ctx.lineWidth = 1;
+  // Líneas verticales tablones sutiles
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+  ctx.lineWidth = 1;
   for(let x=0; x<W; x+=30){
-    ctx.beginPath(); ctx.moveTo(x, my+10); ctx.lineTo(x, my+muelleH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, my+6); ctx.lineTo(x, my+muelleH); ctx.stroke();
   }
 
   // Borde superior muelle
-  ctx.fillStyle = '#7a6030'; ctx.fillRect(0, my+10, W, 4);
+  ctx.fillStyle = '#aaa';
+  ctx.fillRect(0, my + 6, W, 2);
 
   // ── BITAS ──
   BITAS.forEach(b=>{
-    const bx = b.pos * escala;
-    const topY = my + 14;
+    const bx   = b.pos * escala;
+    const topY = my + 10;
     const palH = 16;
     const cr   = b.cap===250 ? 6 : b.cap===150 ? 5 : 4;
+    // bitas 2-10 y bitas 212-201: todas en negro sólido
+    const esLado212 = b.num >= 201 && b.num <= 212;
+
+    const palColor  = esLado212 ? '#b02020' : '#111';
+    const headColor = esLado212 ? '#e04030' : '#111';
 
     // Palo
-    ctx.strokeStyle = b.cap===250 ? '#c0392b' : b.cap===150 ? '#7a6030' : '#b0a080';
+    ctx.strokeStyle = palColor;
     ctx.lineWidth   = b.cap===250 ? 2.5 : 2;
     ctx.beginPath(); ctx.moveTo(bx, topY); ctx.lineTo(bx, topY+palH); ctx.stroke();
 
     // Cabeza
-    const bc = b.cap===250 ? '#e05040' : b.cap===150 ? '#999' : '#bbb';
-    ctx.fillStyle   = bc;
-    ctx.shadowColor = 'rgba(0,0,0,0.25)'; ctx.shadowBlur = 3;
+    ctx.fillStyle   = headColor;
+    ctx.shadowColor = 'rgba(0,0,0,0.18)'; ctx.shadowBlur = 2;
     ctx.beginPath(); ctx.arc(bx, topY+palH, cr, 0, Math.PI*2); ctx.fill();
     ctx.shadowBlur  = 0;
 
-    // Número
-    ctx.fillStyle     = b.cap===250 ? '#a02020' : b.cap===150 ? 'rgba(55,35,5,0.65)' : 'rgba(55,35,5,0.38)';
-    ctx.font          = `bold ${b.cap===250?10:9}px "JetBrains Mono",monospace`;
-    ctx.textAlign     = 'center';
-    ctx.textBaseline  = 'top';
+    // Número — negro sólido siempre
+    ctx.fillStyle    = '#111';
+    ctx.font         = `bold ${b.cap===250?10:9}px "JetBrains Mono",monospace`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'top';
     ctx.fillText(String(b.num), bx, topY+palH+cr+2);
   });
 
-  // ── REGLA DE ESCALA ──
-  const reglaY = my + muelleH - 14;
-  ctx.fillStyle   = 'rgba(70,45,5,0.45)';
-  ctx.font        = 'bold 8px "JetBrains Mono",monospace';
-  ctx.textAlign   = 'left';
-  ctx.textBaseline= 'middle';
-  ctx.fillText('◀ 212 — 201', 14, reglaY);
-  ctx.textAlign = 'right';
-  ctx.fillText('201 — 10 ▶', W - 14, reglaY);
-
-  // Línea de escala con marcas cada 50m
-  const reglaLineY = my + muelleH - 4;
-  ctx.strokeStyle = 'rgba(70,45,5,0.2)'; ctx.lineWidth = 1;
+  // ── REGLA DE ESCALA (negro sólido) ──
+  const reglaY     = my + muelleH - 18;
+  const reglaLineY = my + muelleH - 10;
+  // Línea base
+  ctx.strokeStyle = '#444'; ctx.lineWidth = 0.8;
   ctx.beginPath(); ctx.moveTo(0, reglaLineY); ctx.lineTo(W, reglaLineY); ctx.stroke();
+  // Marcas y etiquetas cada 50m
   for(let m=0; m<=MUELLE_METROS_TOTAL; m+=50){
     const rx = m * escala;
-    ctx.strokeStyle = 'rgba(70,45,5,0.3)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(rx, reglaLineY-3); ctx.lineTo(rx, reglaLineY+3); ctx.stroke();
-    ctx.fillStyle   = 'rgba(70,45,5,0.4)';
-    ctx.font        = '7px "JetBrains Mono",monospace';
-    ctx.textAlign   = 'center'; ctx.textBaseline = 'bottom';
-    ctx.fillText(m+'m', rx, reglaLineY-4);
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(rx, reglaLineY-4); ctx.lineTo(rx, reglaLineY+4); ctx.stroke();
+    ctx.fillStyle    = '#222';
+    ctx.font         = 'bold 8px "JetBrains Mono",monospace';
+    ctx.textAlign    = m===0 ? 'left' : 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(m+'m', rx + (m===0?2:0), reglaLineY-5);
   }
+  // Labels zonas
+  ctx.fillStyle    = '#333';
+  ctx.font         = 'bold 8px "JetBrains Mono",monospace';
+  ctx.textBaseline = 'top';
+  ctx.textAlign    = 'left';
+  ctx.fillText('◀ 212 — 201', 14, my + 4);
+  ctx.textAlign    = 'right';
+  ctx.fillText('201 — 10 ▶', W - 14, my + 4);
 }
 
 /* ============================================================
