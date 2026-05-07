@@ -1037,7 +1037,7 @@ function renderizarCanvas(){
     return Math.max(max, Math.max(30, Math.round(obj.manga * escala)));
   }, 60);
   // Mostrar solo el agua necesaria: altura del buque más alto + margen
-  const aguaVisible = alturaMaxBuque + 1230;
+  const aguaVisible = alturaMaxBuque + 40; // margen sobre los buques
   const muelleH    = muelleR.height;
   const W = Math.round(zonaR.width);
   const H = aguaVisible + muelleH;
