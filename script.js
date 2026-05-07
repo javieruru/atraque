@@ -89,9 +89,15 @@ function generarBitas(){
 function calcularBitas(obj){
   const ini=parseFloat(obj.el.style.left), fin=ini+obj.el.offsetWidth;
   const domB=$$('.bita').map(b=>({num:b.dataset.num,x:b.offsetLeft}));
-  let desde='–',hasta='–';
-  for(let i=0;i<domB.length;i++){if(domB[i].x>=ini){desde=domB[i].num;break;}}
-  for(let i=domB.length-1;i>=0;i--){if(domB[i].x<=fin){hasta=domB[i].num;break;}}
+  // Bita más cercana a la proa (extremo ini): la de menor distancia a ini
+  // Bita más cercana a la popa (extremo fin): la de menor distancia a fin
+  let desde='–', hasta='–', dMin=Infinity, hMin=Infinity;
+  for(const b of domB){
+    const dIni=Math.abs(b.x-ini);
+    const dFin=Math.abs(b.x-fin);
+    if(dIni<dMin){dMin=dIni; desde=b.num;}
+    if(dFin<hMin){hMin=dFin; hasta=b.num;}
+  }
   obj.bitaDesde=desde; obj.bitaHasta=hasta;
 }
 
@@ -1080,27 +1086,36 @@ function renderizarCanvas(){
     ctx.shadowBlur    = 10;
     ctx.shadowOffsetY = 4;
 
-    // Forma del casco
-    ctx.beginPath();
-    if(obj.orientacion === 'babor'){
-      ctx.moveTo(x + buqueW, y);
-      ctx.lineTo(x + r, y);
-      ctx.arc(x + r, y + buqueH/2, r, Math.PI*1.5, Math.PI*0.5, true);
-      ctx.lineTo(x + buqueW, y + buqueH);
-    } else {
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + buqueW - r, y);
-      ctx.arc(x + buqueW - r, y + buqueH/2, r, Math.PI*1.5, Math.PI*0.5, false);
-      ctx.lineTo(x, y + buqueH);
+    // Helper: construye el path del casco (reutilizable para fill y clip)
+    function cascoPath(){
+      ctx.beginPath();
+      if(obj.orientacion === 'babor'){
+        ctx.moveTo(x + buqueW, y);
+        ctx.lineTo(x + r, y);
+        ctx.arc(x + r, y + buqueH/2, r, Math.PI*1.5, Math.PI*0.5, true);
+        ctx.lineTo(x + buqueW, y + buqueH);
+      } else {
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + buqueW - r, y);
+        ctx.arc(x + buqueW - r, y + buqueH/2, r, Math.PI*1.5, Math.PI*0.5, false);
+        ctx.lineTo(x, y + buqueH);
+      }
+      ctx.closePath();
     }
-    ctx.closePath();
 
+    // Pintar casco
+    cascoPath();
     const grad = ctx.createLinearGradient(x, y, x + buqueW, y + buqueH);
     grad.addColorStop(0, obj.color);
     grad.addColorStop(1, darken(obj.color, 22));
     ctx.fillStyle = grad;
     ctx.fill();
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+    // Clip al casco: elementos interiores no sobresalen del borde redondeado
+    ctx.save();
+    cascoPath();
+    ctx.clip();
 
     // Casillería (popa)
     const casW = buqueW * 0.20;
@@ -1116,7 +1131,7 @@ function renderizarCanvas(){
     }
     ctx.beginPath(); ctx.moveTo(casX, y + buqueH*0.5); ctx.lineTo(casX+casW, y + buqueH*0.5); ctx.stroke();
 
-    // Puente (proa)
+    // Puente (proa) — queda dentro del clip, nunca sobresale
     const pteW = buqueW * 0.09;
     const pteX = obj.orientacion === 'babor' ? x + 6 : x + buqueW - pteW - 6;
     ctx.fillStyle = 'rgba(0,0,0,0.22)';
@@ -1138,6 +1153,8 @@ function renderizarCanvas(){
     ctx.fillStyle = 'rgba(255,255,255,0.62)';
     ctx.fillText(`${obj.metros}m · ${obj.manga}m manga`, x + buqueW/2, y + buqueH/2 + subSize);
     ctx.shadowBlur = 0;
+
+    ctx.restore(); // quitar clip
   });
 
   // ── CABOS ──
