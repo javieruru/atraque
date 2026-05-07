@@ -176,7 +176,7 @@ max-width: calc(100vw - 32px);
 .tabla-buques thead th { background:#eef8fc; color:var(--text2); font-weight:700; font-size:9px; letter-spacing:.07em; text-transform:uppercase; padding:5px 4px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
 .tabla-buques tbody tr.fila-buque { border-bottom:1px solid #e4f2f8; transition:background .12s; }
 .tabla-buques tbody tr.fila-buque:hover { background:#f0faff; }
-.tabla-buques td { padding:5px 4px; color:var(--text); font-family:var(--font-mono); font-size:10px; white-space:nowrap; }
+.tabla-buques td { padding:5px 4px; color:var(--text); font-family:var(--font-mono); font-size:10px; }
 .color-dot { width:13px; height:13px; border-radius:3px; display:inline-block; vertical-align:middle; border:1px solid rgba(0,0,0,.1); }
 .lock-btn-table { background:none; border:none; cursor:pointer; font-size:13px; padding:0 2px; opacity:.65; transition:opacity .14s,transform .14s; }
 .lock-btn-table:hover { opacity:1; transform:scale(1.2); }
