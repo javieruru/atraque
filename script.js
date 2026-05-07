@@ -118,6 +118,7 @@ function mostrarInfoBuque(obj){
   pifBody.innerHTML=`
     <div class="pif-row"><span class="pif-label">Eslora</span><span class="pif-value">${obj.metros} m</span></div>
     <div class="pif-row"><span class="pif-label">Manga</span><span class="pif-value">${obj.manga} m</span></div>
+    <div class="pif-row"><span class="pif-label">Moves</span><span class="pif-value highlight">${obj.moves||0}</span></div>
     <div class="pif-row"><span class="pif-label">Banda</span><span class="pif-value">${obj.orientacion.charAt(0).toUpperCase()+obj.orientacion.slice(1)}</span></div>
     <div class="pif-row"><span class="pif-label">Bitas</span><span class="pif-value highlight">${obj.bitaDesde} → ${obj.bitaHasta}</span></div>
     <div class="pif-row"><span class="pif-label">Estado</span><span class="pif-value ${obj.locked?'warn':''}">${obj.locked?'🔒 Bloqueado':'🔓 Libre'}</span></div>
@@ -217,7 +218,7 @@ function buqueHTML(info){
       <div class="buque-cubierta-linea"></div>
       <div class="buque-texto">
         <div class="buque-nombre">${info.nombre}</div>
-        <div class="buque-metros">${info.metros}m · ${info.manga}m manga</div>
+        <div class="buque-metros">${info.metros}m · ${info.manga}m manga · ${info.moves||0} moves</div>
       </div>
     </div>
     <div class="lock-badge">🔒</div>
@@ -238,15 +239,15 @@ function crearBuqueEl(info){
 /* ============================================================
    AGREGAR BUQUE
 ============================================================ */
-function agregarBuque(nombre,metros,manga,color,orientacion){
-  metros=parseFloat(metros); manga=parseFloat(manga);
+function agregarBuque(nombre,metros,manga,color,orientacion,moves){
+  metros=parseFloat(metros); manga=parseFloat(manga); moves=parseInt(moves)||0;
   if(!nombre||isNaN(metros)||metros<70||isNaN(manga)||manga<8){mostrarToast('⚠ Datos inválidos');return false;}
   const xPx=encontrarHueco(metros);
   if(xPx===null){mostrarToast('⚠ No hay espacio libre');return false;}
   const id=++idCounter;
-  const info={id,nombre:nombre.toUpperCase(),metros,manga,color,orientacion,x:xPx};
+  const info={id,nombre:nombre.toUpperCase(),metros,manga,color,orientacion,moves,x:xPx};
   const el=crearBuqueEl(info);
-  const obj={id,nombre:info.nombre,metros,manga,color,orientacion,locked:false,el,bitaDesde:'–',bitaHasta:'–',leftM:xPx/getEscala()};
+  const obj={id,nombre:info.nombre,metros,manga,color,orientacion,moves,locked:false,el,bitaDesde:'–',bitaHasta:'–',leftM:xPx/getEscala()};
   buques.push(obj);
   $('#zonaBuques').appendChild(el);
   calcularBitas(obj); iniciarDrag(obj); iniciarHoverInfo(obj); iniciarPanelCabos(obj);
@@ -259,7 +260,7 @@ function agregarBuque(nombre,metros,manga,color,orientacion){
    PERSISTENCIA
 ============================================================ */
 function guardarEstado(){
-  localStorage.setItem('docksim_buques',JSON.stringify(buques.map(b=>({id:b.id,nombre:b.nombre,metros:b.metros,manga:b.manga,color:b.color,orientacion:b.orientacion,locked:b.locked,leftM:b.leftM}))));
+  localStorage.setItem('docksim_buques',JSON.stringify(buques.map(b=>({id:b.id,nombre:b.nombre,metros:b.metros,manga:b.manga,color:b.color,orientacion:b.orientacion,moves:b.moves||0,locked:b.locked,leftM:b.leftM}))));
   // Solo guardar datos lógicos — las coords se recalculan desde escala al restaurar
   localStorage.setItem('docksim_cabos',JSON.stringify(cabos.map(c=>({id:c.id,buqueId:c.buqueId,pctX:c.pctX,pctY:c.pctY,bitaNum:c.bitaNum}))));
   localStorage.setItem('docksim_counter',String(idCounter));
@@ -274,9 +275,9 @@ function cargarEstado(){
     if(cnt)idCounter=parseInt(cnt);
     data.forEach(d=>{
       const escala=getEscala(),alt=Math.max(30,Math.round((d.manga||35)*escala)),xPx=(d.leftM||0)*escala;
-      const info={...d,manga:d.manga||35,x:xPx};
+      const info={...d,manga:d.manga||35,moves:d.moves||0,x:xPx};
       const el=crearBuqueEl(info); el.style.height=alt+'px';
-      const obj={...info,el,bitaDesde:'–',bitaHasta:'–'};
+      const obj={...info,el,bitaDesde:'–',bitaHasta:'–',moves:d.moves||0};
       buques.push(obj);
       $('#zonaBuques').appendChild(el);
       calcularBitas(obj); iniciarDrag(obj); iniciarHoverInfo(obj); iniciarPanelCabos(obj);
@@ -541,6 +542,7 @@ function actualizarTabla(){
       <td>${obj.orientacion.charAt(0).toUpperCase()+obj.orientacion.slice(1)}</td>
       <td>${obj.metros} m</td>
       <td>${obj.manga} m</td>
+      <td>${obj.moves||0}</td>
       <td>${obj.bitaDesde} → ${obj.bitaHasta}</td>
       <td><button class="lock-btn-table" data-id="${obj.id}">${obj.locked?'🔒':'🔓'}</button></td>
       <td>
@@ -555,7 +557,7 @@ function actualizarTabla(){
     trCabos.className='fila-cabos-wrap';
     trCabos.id=`tcr-${obj.id}`;
     const tdCabos=document.createElement('td');
-    tdCabos.colSpan=8;
+    tdCabos.colSpan=9;
     const inner=document.createElement('div');
     inner.className='fila-cabos-inner';
 
@@ -645,11 +647,11 @@ $('#tablaBody').addEventListener('click',e=>{
   $('#cancelAgregar').addEventListener('click',cerrar);
   overlay.addEventListener('click',cerrar);
   $('#confirmAgregar').addEventListener('click',()=>{
-    const nombre=$('#inp-nombre').value.trim(),metros=$('#inp-metros').value,manga=$('#inp-manga').value,color=$('#inp-color').value;
+    const nombre=$('#inp-nombre').value.trim(),metros=$('#inp-metros').value,manga=$('#inp-manga').value,color=$('#inp-color').value,moves=$('#inp-moves').value;
     if(!nombre){$('#inp-nombre').focus();mostrarToast('⚠ Ingresá el nombre');return;}
     if(!metros||parseFloat(metros)<70){$('#inp-metros').focus();mostrarToast('⚠ Eslora mínima 70 m');return;}
     if(!manga||parseFloat(manga)<8){$('#inp-manga').focus();mostrarToast('⚠ Manga mínima 8 m');return;}
-    if(agregarBuque(nombre,metros,manga,color,bandaVal))cerrar();
+    if(agregarBuque(nombre,metros,manga,color,bandaVal,moves))cerrar();
   });
   [$('#inp-nombre'),$('#inp-metros'),$('#inp-manga')].forEach(inp=>inp?.addEventListener('keydown',e=>{if(e.key==='Enter')$('#confirmAgregar').click();}));
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('visible'))cerrar();});
@@ -678,14 +680,14 @@ function cerrarModalConfirmBanda(){
 
 function aplicarCambioBanda(){
   if(!pendienteBandaChange) return;
-  const {obj,nombre,metros,manga,color,banda,newX,escala,ap,alt}=pendienteBandaChange;
+  const {obj,nombre,metros,manga,color,banda,moves,newX,escala,ap,alt}=pendienteBandaChange;
 
   // Eliminar todos los cabos del buque
   cabos.filter(c=>c.buqueId===obj.id).forEach(c=>{ c.puntoEl?.remove(); c.lineaEl?.remove(); });
   cabos=cabos.filter(c=>c.buqueId!==obj.id);
 
   // Aplicar cambios
-  obj.nombre=nombre; obj.metros=metros; obj.manga=manga; obj.color=color; obj.orientacion=banda; obj.leftM=newX/escala;
+  obj.nombre=nombre; obj.metros=metros; obj.manga=manga; obj.color=color; obj.orientacion=banda; obj.moves=moves; obj.leftM=newX/escala;
   obj.el.className=`buque${banda==='babor'?' babor':''}${obj.locked?' locked':''}`;
   obj.el.style.width=ap+'px'; obj.el.style.height=alt+'px'; obj.el.style.left=newX+'px';
   obj.el.innerHTML=buqueHTML(obj);
@@ -697,7 +699,7 @@ function aplicarCambioBanda(){
 function abrirModalEditar(obj){
   objEditando=obj;
   const overlay=$('#overlayEditar'),modal=$('#modalEditar'),segBanda=$('#seg-edit-banda');
-  $('#edit-nombre').value=obj.nombre;$('#edit-metros').value=obj.metros;$('#edit-manga').value=obj.manga;$('#edit-color').value=obj.color;
+  $('#edit-nombre').value=obj.nombre;$('#edit-metros').value=obj.metros;$('#edit-manga').value=obj.manga;$('#edit-color').value=obj.color;$('#edit-moves').value=obj.moves||0;
   segBanda.querySelectorAll('.seg-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.val===obj.orientacion));
   overlay.style.display='block';modal.style.display='block';
   requestAnimationFrame(()=>{overlay.classList.add('visible');modal.classList.add('visible');});
@@ -710,7 +712,7 @@ function abrirModalEditar(obj){
   $('#closeEditar').addEventListener('click',cerrar);$('#cancelEditar').addEventListener('click',cerrar);overlay.addEventListener('click',cerrar);
   $('#confirmEditar').addEventListener('click',()=>{
     if(!objEditando)return;
-    const obj=objEditando,nombre=$('#edit-nombre').value.trim(),metros=parseFloat($('#edit-metros').value),manga=parseFloat($('#edit-manga').value),color=$('#edit-color').value;
+    const obj=objEditando,nombre=$('#edit-nombre').value.trim(),metros=parseFloat($('#edit-metros').value),manga=parseFloat($('#edit-manga').value),color=$('#edit-color').value,moves=parseInt($('#edit-moves').value)||0;
     const banda=segBanda.querySelector('.seg-btn.active')?.dataset.val||obj.orientacion;
     if(!nombre){mostrarToast('⚠ Nombre requerido');return;}
     if(isNaN(metros)||metros<70){mostrarToast('⚠ Eslora mínima 70 m');return;}
@@ -724,12 +726,12 @@ function abrirModalEditar(obj){
     const cabosBuque = cabos.filter(c=>c.buqueId===obj.id);
     if(banda !== obj.orientacion && cabosBuque.length > 0){
       // Guardar datos del edit para usar después de confirmar
-      pendienteBandaChange = { obj, nombre:nombre.toUpperCase(), metros, manga, color, banda, newX, escala, ap, alt };
+      pendienteBandaChange = { obj, nombre:nombre.toUpperCase(), metros, manga, color, banda, moves, newX, escala, ap, alt };
       cerrar();
       abrirModalConfirmBanda(cabosBuque.length);
       return;
     }
-    obj.nombre=nombre.toUpperCase();obj.metros=metros;obj.manga=manga;obj.color=color;obj.orientacion=banda;obj.leftM=newX/escala;
+    obj.nombre=nombre.toUpperCase();obj.metros=metros;obj.manga=manga;obj.color=color;obj.orientacion=banda;obj.moves=moves;obj.leftM=newX/escala;
     obj.el.className=`buque${banda==='babor'?' babor':''}${obj.locked?' locked':''}`;
     obj.el.style.width=ap+'px';obj.el.style.height=alt+'px';obj.el.style.left=newX+'px';
     obj.el.innerHTML=buqueHTML(obj);
@@ -1154,7 +1156,7 @@ function renderizarCanvas(){
     const subSize = Math.max(7, fontSize * 0.7);
     ctx.font = `${subSize}px "JetBrains Mono",monospace`;
     ctx.fillStyle = 'rgba(255,255,255,0.62)';
-    ctx.fillText(`${obj.metros}m · ${obj.manga}m manga`, x + buqueW/2, y + buqueH/2 + subSize);
+    ctx.fillText(`${obj.metros}m · ${obj.manga}m manga · ${obj.moves||0} moves`, x + buqueW/2, y + buqueH/2 + subSize);
     ctx.shadowBlur = 0;
 
     ctx.restore(); // quitar clip
@@ -1317,6 +1319,7 @@ function prepararPrintZone(){
       <td>${obj.orientacion.charAt(0).toUpperCase()+obj.orientacion.slice(1)}</td>
       <td>${obj.metros} m</td>
       <td>${obj.manga} m</td>
+      <td>${obj.moves||0}</td>
       <td>${obj.bitaDesde} → ${obj.bitaHasta}</td>
       <td>${cabosTags}</td>`;
     tbody.appendChild(tr);

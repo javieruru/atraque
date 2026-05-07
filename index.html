@@ -87,7 +87,7 @@
       <div class="panel-body" id="panelBody">
         <table class="tabla-buques" id="tablaBuques" style="display:none">
           <thead>
-            <tr><th></th><th>Nombre</th><th>Banda</th><th>Eslora</th><th>Manga</th><th>Bitas</th><th>🔒</th><th>⚓</th></tr>
+            <tr><th></th><th>Nombre</th><th>Banda</th><th>Eslora</th><th>Manga</th><th>Moves</th><th>Bitas</th><th>🔒</th><th>⚓</th></tr>
           </thead>
           <tbody id="tablaBody"></tbody>
         </table>
@@ -116,6 +116,10 @@
             <label class="field-label">Manga (m)</label>
             <input class="field-input" type="number" id="inp-manga" placeholder="35" min="8" max="70" />
           </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Moves</label>
+          <input class="field-input" type="number" id="inp-moves" placeholder="0" min="0" />
         </div>
         <div class="field-group">
           <label class="field-label">Banda</label>
@@ -160,6 +164,10 @@
             <label class="field-label">Manga (m)</label>
             <input class="field-input" type="number" id="edit-manga" min="8" max="70" />
           </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Moves</label>
+          <input class="field-input" type="number" id="edit-moves" placeholder="0" min="0" />
         </div>
         <div class="field-group">
           <label class="field-label">Banda</label>
@@ -231,6 +239,7 @@
             <th>Banda</th>
             <th>Eslora</th>
             <th>Manga</th>
+            <th>Moves</th>
             <th>Bitas</th>
             <th>Cabos amarrados</th>
           </tr>
