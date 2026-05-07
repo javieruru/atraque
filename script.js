@@ -1007,8 +1007,40 @@ function renderCanvas(canvasEl, aguaH, muelleH){
 })();
 
 /* ============================================================
-   INIT IMPRIMIR
+   CONFIGURACIÓN DE IMPRESIÓN
 ============================================================ */
+const printConfig = {
+  banda: true, eslora: true, manga: true, moves: true,
+  bitas: true, cabos: true,
+  'diag-cabos': true, 'diag-bitas': true, 'diag-regla': true
+};
+
+(function initModalConfig(){
+  const overlay=$('#overlayConfig'), modal=$('#modalConfig');
+
+  function abrir(){
+    // Sincronizar checkboxes con estado actual
+    $$('.print-col-toggle').forEach(cb=>{
+      cb.checked = printConfig[cb.dataset.col] !== false;
+    });
+    overlay.style.display='block'; modal.style.display='block';
+    requestAnimationFrame(()=>{ overlay.classList.add('visible'); modal.classList.add('visible'); });
+  }
+  function cerrar(){
+    // Leer checkboxes → actualizar config
+    $$('.print-col-toggle').forEach(cb=>{ printConfig[cb.dataset.col]=cb.checked; });
+    overlay.classList.remove('visible'); modal.classList.remove('visible');
+    setTimeout(()=>{ overlay.style.display='none'; modal.style.display='none'; }, 230);
+  }
+
+  $('#btnConfig')?.addEventListener('click', abrir);
+  $('#closeConfig')?.addEventListener('click', cerrar);
+  $('#closeConfigOk')?.addEventListener('click', cerrar);
+  overlay?.addEventListener('click', cerrar);
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && modal.classList.contains('visible')) cerrar(); });
+})();
+
+
 (function initImprimir(){
   const btn=$('#btnImprimir');
 
@@ -1163,6 +1195,7 @@ function renderizarCanvas(){
   });
 
   // ── CABOS ──
+  if(printConfig['diag-cabos']){
   ctx.strokeStyle = '#ff6600';
   ctx.lineWidth   = 2;
   ctx.lineCap     = 'round';
@@ -1195,6 +1228,7 @@ function renderizarCanvas(){
     ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI*2); ctx.fill();
   });
   ctx.shadowBlur = 0;
+  } // end diag-cabos
 
   // ── MUELLE (gris claro para impresión) ──
   const my = aguaVisible;
@@ -1219,43 +1253,36 @@ function renderizarCanvas(){
   ctx.fillRect(0, my + 6, W, 2);
 
   // ── BITAS ──
+  if(printConfig['diag-bitas']){
   BITAS.forEach(b=>{
     const bx   = b.pos * escala;
     const topY = my + 10;
     const palH = 16;
     const cr   = b.cap===250 ? 6 : b.cap===150 ? 5 : 4;
-    // bitas 2-10 y bitas 212-201: todas en negro sólido
     const esLado212 = b.num >= 201 && b.num <= 212;
-
     const palColor  = esLado212 ? '#b02020' : '#111';
     const headColor = esLado212 ? '#e04030' : '#111';
-
-    // Palo
     ctx.strokeStyle = palColor;
     ctx.lineWidth   = b.cap===250 ? 2.5 : 2;
     ctx.beginPath(); ctx.moveTo(bx, topY); ctx.lineTo(bx, topY+palH); ctx.stroke();
-
-    // Cabeza
     ctx.fillStyle   = headColor;
     ctx.shadowColor = 'rgba(0,0,0,0.18)'; ctx.shadowBlur = 2;
     ctx.beginPath(); ctx.arc(bx, topY+palH, cr, 0, Math.PI*2); ctx.fill();
     ctx.shadowBlur  = 0;
-
-    // Número — negro sólido siempre
     ctx.fillStyle    = '#111';
     ctx.font         = `bold ${b.cap===250?10:9}px "JetBrains Mono",monospace`;
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(String(b.num), bx, topY+palH+cr+2);
   });
+  } // end diag-bitas
 
   // ── REGLA DE ESCALA (negro sólido) ──
+  if(printConfig['diag-regla']){
   const reglaY     = my + muelleH - 18;
   const reglaLineY = my + muelleH - 10;
-  // Línea base
   ctx.strokeStyle = '#444'; ctx.lineWidth = 0.8;
   ctx.beginPath(); ctx.moveTo(0, reglaLineY); ctx.lineTo(W, reglaLineY); ctx.stroke();
-  // Marcas y etiquetas cada 50m
   for(let m=0; m<=MUELLE_METROS_TOTAL; m+=50){
     const rx = m * escala;
     ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
@@ -1266,7 +1293,6 @@ function renderizarCanvas(){
     ctx.textBaseline = 'bottom';
     ctx.fillText(m+'m', rx + (m===0?2:0), reglaLineY-5);
   }
-  // Labels zonas
   ctx.fillStyle    = '#333';
   ctx.font         = 'bold 8px "JetBrains Mono",monospace';
   ctx.textBaseline = 'top';
@@ -1274,6 +1300,7 @@ function renderizarCanvas(){
   ctx.fillText('◀ 212 — 201', 14, my + 4);
   ctx.textAlign    = 'right';
   ctx.fillText('201 — 10 ▶', W - 14, my + 4);
+  } // end diag-regla
 }
 
 /* ============================================================
@@ -1296,7 +1323,17 @@ function prepararPrintZone(){
   // Renderizar canvas
   renderizarCanvas();
 
-  // Tabla
+  // Tabla — mostrar/ocultar columnas según config
+  // Orden de th: # | Nombre | Banda | Eslora | Manga | Moves | Bitas | Cabos
+  const colMap = { banda:2, eslora:3, manga:4, moves:5, bitas:6, cabos:7 };
+  const thead = $('#pzTabla thead tr');
+  if(thead){
+    Object.entries(colMap).forEach(([key, idx])=>{
+      const th = thead.children[idx];
+      if(th) th.style.display = printConfig[key] ? '' : 'none';
+    });
+  }
+
   const tbody = $('#pzTablaBody');
   tbody.innerHTML = '';
   buques.forEach((obj, i)=>{
@@ -1313,15 +1350,17 @@ function prepararPrintZone(){
         }).join('');
 
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="color:#888;font-size:9px">${i+1}</td>
-      <td><span class="pz-color-dot" style="background:${obj.color}"></span><strong>${obj.nombre}</strong></td>
-      <td>${obj.orientacion.charAt(0).toUpperCase()+obj.orientacion.slice(1)}</td>
-      <td>${obj.metros} m</td>
-      <td>${obj.manga} m</td>
-      <td>${obj.moves||0}</td>
-      <td>${obj.bitaDesde} → ${obj.bitaHasta}</td>
-      <td>${cabosTags}</td>`;
+    const cells = [
+      `<td style="color:#888;font-size:9px">${i+1}</td>`,
+      `<td><span class="pz-color-dot" style="background:${obj.color}"></span><strong>${obj.nombre}</strong></td>`,
+      `<td style="display:${printConfig.banda?'':'none'}">${obj.orientacion.charAt(0).toUpperCase()+obj.orientacion.slice(1)}</td>`,
+      `<td style="display:${printConfig.eslora?'':'none'}">${obj.metros} m</td>`,
+      `<td style="display:${printConfig.manga?'':'none'}">${obj.manga} m</td>`,
+      `<td style="display:${printConfig.moves?'':'none'}">${obj.moves||0}</td>`,
+      `<td style="display:${printConfig.bitas?'':'none'}">${obj.bitaDesde} → ${obj.bitaHasta}</td>`,
+      `<td style="display:${printConfig.cabos?'':'none'}">${cabosTags}</td>`
+    ];
+    tr.innerHTML = cells.join('');
     tbody.appendChild(tr);
   });
 }

@@ -26,6 +26,7 @@
         <span class="header-hint">Ctrl + clic sobre buque = punto de amarre</span>
       </div>
       <div class="header-actions">
+        <button class="btn-config" id="btnConfig" title="Configuración de impresión">⚙️</button>
         <button class="btn-print" id="btnImprimir" title="Imprimir / PDF">🖨️</button>
         <button class="btn-add" id="btnAgregarBuque">
           <span class="btn-add-icon">＋</span>
@@ -203,6 +204,35 @@
       <div class="modal-footer">
         <button class="btn-cancel" id="confirmBandaNo">Cancelar</button>
         <button class="btn-danger" style="margin-right:0" id="confirmBandaSi">Eliminar cabos y cambiar banda</button>
+      </div>
+    </div>
+
+    <!-- Modal configuración impresión -->
+    <div class="overlay" id="overlayConfig"></div>
+    <div class="modal" id="modalConfig">
+      <div class="modal-header">
+        <h2 class="modal-title">⚙️ Configuración de impresión</h2>
+        <button class="modal-close" id="closeConfig">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="config-section-title">Columnas visibles en la tabla</p>
+        <div class="config-toggles">
+          <label class="toggle-row"><span class="toggle-label">Banda</span><input type="checkbox" class="print-col-toggle" data-col="banda" checked /></label>
+          <label class="toggle-row"><span class="toggle-label">Eslora</span><input type="checkbox" class="print-col-toggle" data-col="eslora" checked /></label>
+          <label class="toggle-row"><span class="toggle-label">Manga</span><input type="checkbox" class="print-col-toggle" data-col="manga" checked /></label>
+          <label class="toggle-row"><span class="toggle-label">Moves</span><input type="checkbox" class="print-col-toggle" data-col="moves" checked /></label>
+          <label class="toggle-row"><span class="toggle-label">Bitas</span><input type="checkbox" class="print-col-toggle" data-col="bitas" checked /></label>
+          <label class="toggle-row"><span class="toggle-label">Cabos amarrados</span><input type="checkbox" class="print-col-toggle" data-col="cabos" checked /></label>
+        </div>
+        <p class="config-section-title" style="margin-top:18px">Elementos del diagrama</p>
+        <div class="config-toggles">
+          <label class="toggle-row"><span class="toggle-label">Mostrar cabos en diagrama</span><input type="checkbox" class="print-col-toggle" data-col="diag-cabos" checked /></label>
+          <label class="toggle-row"><span class="toggle-label">Mostrar bitas</span><input type="checkbox" class="print-col-toggle" data-col="diag-bitas" checked /></label>
+          <label class="toggle-row"><span class="toggle-label">Mostrar regla de metros</span><input type="checkbox" class="print-col-toggle" data-col="diag-regla" checked /></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-confirm" id="closeConfigOk">Listo</button>
       </div>
     </div>
 
