@@ -1582,7 +1582,7 @@ window.DockSim = {
         <div class="sesion-info">
           <span class="sesion-nombre">${s.nombre}</span>
           <span class="sesion-meta">${s.fechaStr} · ${s.buques?.length||0} buque${s.buques?.length!==1?'s':''}</span>
-          <span class="sesion-buques">${(s.buques||[]).map(b=>`<span class="sesion-badge" style="border-color:${b.color};background:${b.color}22">${b.nombre}</span>`).join('')}</span>
+          <span class="sesion-buques">${(s.buques||[]).map(b=>`<span class="sesion-badge" style="border-color:${b.color};background:${b.color}22">${b.nombre} · ${b.metros}m · ${b.moves||0} mov</span>`).join('')}</span>
         </div>
         <div class="sesion-acciones">
           <button class="btn-sesion-cargar"   data-id="${s.id}">Cargar</button>
