@@ -1429,12 +1429,12 @@ window.DockSim = {
   // Restaura un snapshot (usado al cargar sesión por link o desde lista)
   cargarSnapshot(data) {
     // Limpiar estado actual
-    buques.forEach(b=>{ b.el?.remove(); b.puntos?.forEach(p=>p.remove()); });
+    buques.forEach(b=>{ b.el?.remove(); });
     cabos.forEach(c=>{ c.puntoEl?.remove(); c.lineaEl?.remove(); });
     buques=[]; cabos=[];
 
-    idCounter    = data.contadores?.idCounter    || 0;
-    caboCounter  = data.contadores?.caboCounter  || 0;
+    idCounter   = data.contadores?.idCounter   || 0;
+    caboCounter = data.contadores?.caboCounter || 0;
 
     // Restaurar buques
     data.buques.forEach(d=>{
@@ -1445,21 +1445,25 @@ window.DockSim = {
       const obj    = {...info, el, bitaDesde:'–', bitaHasta:'–'};
       buques.push(obj);
       $('#zonaBuques').appendChild(el);
+      // Aplicar locked al DOM
+      if(d.locked){ obj.locked=true; el.classList.add('locked'); }
       calcularBitas(obj); iniciarDrag(obj); iniciarHoverInfo(obj); iniciarPanelCabos(obj);
     });
 
-    // Restaurar cabos
-    data.cabos.forEach(d=>{
-      const obj = buques.find(b=>b.id===d.buqueId);
-      if(!obj) return;
-      const bitaData = BITAS.find(b=>b.num===d.bitaNum);
-      if(!bitaData) return;
-      const cabo = crearCabo(obj, d.pctX, d.pctY, bitaData);
-      if(cabo) cabo.id = d.id;
-    });
-
     generarBitas(); actualizarTabla();
-    mostrarToast('✅ Sesión cargada');
+
+    // Esperar dos frames para que el browser calcule layout y posiciones reales
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      data.cabos.forEach(d=>{
+        const obj = buques.find(b=>b.id===d.buqueId);
+        if(!obj) return;
+        const bitaData = BITAS.find(b=>b.num===d.bitaNum);
+        if(!bitaData) return;
+        crearCabo(obj, d.pctX, d.pctY, d.bitaNum, d.id);
+      });
+      actualizarTabla();
+      mostrarToast('✅ Sesión cargada');
+    }));
   }
 };
 
