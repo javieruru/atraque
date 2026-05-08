@@ -1428,7 +1428,13 @@ window.DockSim = {
   },
   // Restaura un snapshot (usado al cargar sesión por link o desde lista)
   cargarSnapshot(data) {
-    // Limpiar estado actual
+    // Cerrar cualquier modal abierto antes de restaurar
+    ['overlayEditar','modalEditar','overlayAgregar','modalAgregar',
+     'overlaySesiones','modalSesiones','overlayConfig','modalConfig'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){ el.classList.remove('visible'); el.style.display='none'; }
+    });
+    objEditando=null;
     buques.forEach(b=>{ b.el?.remove(); });
     cabos.forEach(c=>{ c.puntoEl?.remove(); c.lineaEl?.remove(); });
     buques=[]; cabos=[];
