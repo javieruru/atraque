@@ -26,7 +26,9 @@
         <span class="header-hint">Ctrl + clic sobre buque = punto de amarre</span>
       </div>
       <div class="header-actions">
-        <button class="btn-config" id="btnConfig" title="Configuración de impresión">⚙️</button>
+        <button class="btn-sesiones" id="btnSesiones" title="Sesiones guardadas">📋</button>
+        <button class="btn-guardar-sesion" id="btnGuardarSesion" title="Guardar sesión actual">💾</button>
+        <button class="btn-config" id="btnConfig" title="Configuración">⚙️</button>
         <button class="btn-print" id="btnImprimir" title="Imprimir / PDF">🖨️</button>
         <button class="btn-add" id="btnAgregarBuque">
           <span class="btn-add-icon">＋</span>
@@ -236,6 +238,62 @@
       </div>
     </div>
 
+    <!-- Modal guardar sesión -->
+    <div class="overlay" id="overlayGuardarSesion"></div>
+    <div class="modal" id="modalGuardarSesion">
+      <div class="modal-header">
+        <h2 class="modal-title">💾 Guardar sesión</h2>
+        <button class="modal-close" id="closeGuardarSesion">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label class="field-label">Nombre de la sesión</label>
+          <input class="field-input" type="text" id="inp-nombre-sesion" placeholder="Ej: Mañana 08/05 — UNISPIRIT" autocomplete="off" />
+        </div>
+        <p class="sesion-hint">Se guardará en la nube con un ID único. Podrás compartirla por link.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="cancelGuardarSesion">Cancelar</button>
+        <button class="btn-confirm" id="confirmGuardarSesion">Guardar</button>
+      </div>
+    </div>
+
+    <!-- Modal link compartido -->
+    <div class="overlay" id="overlayLinkSesion"></div>
+    <div class="modal" id="modalLinkSesion">
+      <div class="modal-header">
+        <h2 class="modal-title">🔗 Sesión guardada</h2>
+        <button class="modal-close" id="closeLinkSesion">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="sesion-hint" style="margin-bottom:10px">Copiá este link para compartir la sesión:</p>
+        <div class="link-box">
+          <span class="link-text" id="linkSesionText"></span>
+          <button class="btn-copy" id="btnCopyLink">Copiar</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-confirm" id="closeLinkSesionOk">Listo</button>
+      </div>
+    </div>
+
+    <!-- Modal listar sesiones -->
+    <div class="overlay" id="overlaySesiones"></div>
+    <div class="modal modal-wide" id="modalSesiones">
+      <div class="modal-header">
+        <h2 class="modal-title">📋 Sesiones guardadas</h2>
+        <button class="modal-close" id="closeSesiones">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="sesiones-lista" id="sesionesLista">
+          <div class="sesiones-loading">Cargando sesiones...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="cancelSesiones">Cerrar</button>
+      </div>
+    </div>
+
     <div class="toast" id="toast"></div>
   </div>
 
@@ -284,5 +342,6 @@
   </div>
 
   <script src="script.js"></script>
+  <script type="module" src="firebase.js"></script>
 </body>
 </html>

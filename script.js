@@ -1398,8 +1398,6 @@ window.addEventListener('resize',()=>{
 window.addEventListener('load',()=>{
   generarBitas();
   cargarEstado();
-  // Re-dibujar líneas de cabos una vez que la página esté completamente cargada
-  // (fonts, imágenes, layout final)
   window.addEventListener('load', ()=>{
     requestAnimationFrame(()=>{
       cabos.forEach(c=>{
@@ -1409,3 +1407,191 @@ window.addEventListener('load',()=>{
     });
   }, {once:true});
 });
+
+/* ============================================================
+   API GLOBAL — usada por firebase.js
+============================================================ */
+window.DockSim = {
+  // Devuelve snapshot completo del estado actual
+  getSnapshot() {
+    return {
+      buques: buques.map(b=>({
+        id:b.id, nombre:b.nombre, metros:b.metros, manga:b.manga,
+        color:b.color, orientacion:b.orientacion, moves:b.moves||0,
+        locked:b.locked, leftM:b.leftM
+      })),
+      cabos: cabos.map(c=>({
+        id:c.id, buqueId:c.buqueId, pctX:c.pctX, pctY:c.pctY, bitaNum:c.bitaNum
+      })),
+      contadores: { idCounter, caboCounter }
+    };
+  },
+  // Restaura un snapshot (usado al cargar sesión por link o desde lista)
+  cargarSnapshot(data) {
+    // Limpiar estado actual
+    buques.forEach(b=>{ b.el?.remove(); b.puntos?.forEach(p=>p.remove()); });
+    cabos.forEach(c=>{ c.puntoEl?.remove(); c.lineaEl?.remove(); });
+    buques=[]; cabos=[];
+
+    idCounter    = data.contadores?.idCounter    || 0;
+    caboCounter  = data.contadores?.caboCounter  || 0;
+
+    // Restaurar buques
+    data.buques.forEach(d=>{
+      const escala = getEscala();
+      const xPx    = (d.leftM||0) * escala;
+      const info   = {...d, manga:d.manga||35, moves:d.moves||0, x:xPx};
+      const el     = crearBuqueEl(info);
+      const obj    = {...info, el, bitaDesde:'–', bitaHasta:'–'};
+      buques.push(obj);
+      $('#zonaBuques').appendChild(el);
+      calcularBitas(obj); iniciarDrag(obj); iniciarHoverInfo(obj); iniciarPanelCabos(obj);
+    });
+
+    // Restaurar cabos
+    data.cabos.forEach(d=>{
+      const obj = buques.find(b=>b.id===d.buqueId);
+      if(!obj) return;
+      const bitaData = BITAS.find(b=>b.num===d.bitaNum);
+      if(!bitaData) return;
+      const cabo = crearCabo(obj, d.pctX, d.pctY, bitaData);
+      if(cabo) cabo.id = d.id;
+    });
+
+    generarBitas(); actualizarTabla();
+    mostrarToast('✅ Sesión cargada');
+  }
+};
+
+/* ============================================================
+   SESIONES — modales y lógica UI
+============================================================ */
+(function initSesiones(){
+  // ── helpers modal ──
+  function abrirModal(ovId, modId){
+    const ov=$('#'+ovId), mo=$('#'+modId);
+    ov.style.display='block'; mo.style.display='block';
+    requestAnimationFrame(()=>{ ov.classList.add('visible'); mo.classList.add('visible'); });
+  }
+  function cerrarModal(ovId, modId){
+    const ov=$('#'+ovId), mo=$('#'+modId);
+    ov.classList.remove('visible'); mo.classList.remove('visible');
+    setTimeout(()=>{ ov.style.display='none'; mo.style.display='none'; }, 230);
+  }
+
+  // ── Guardar sesión ──
+  $('#btnGuardarSesion')?.addEventListener('click', ()=>{
+    if(buques.length===0){ mostrarToast('⚠ No hay buques para guardar'); return; }
+    const now = new Date();
+    $('#inp-nombre-sesion').value = `${now.toLocaleDateString('es-UY')} ${now.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'})}`;
+    abrirModal('overlayGuardarSesion','modalGuardarSesion');
+    setTimeout(()=>$('#inp-nombre-sesion').focus(), 250);
+  });
+  $('#closeGuardarSesion')?.addEventListener('click', ()=>cerrarModal('overlayGuardarSesion','modalGuardarSesion'));
+  $('#cancelGuardarSesion')?.addEventListener('click', ()=>cerrarModal('overlayGuardarSesion','modalGuardarSesion'));
+
+  $('#confirmGuardarSesion')?.addEventListener('click', async ()=>{
+    const nombre = $('#inp-nombre-sesion').value.trim();
+    if(!nombre){ $('#inp-nombre-sesion').focus(); return; }
+    const btn = $('#confirmGuardarSesion');
+    btn.disabled=true; btn.textContent='Guardando...';
+    try {
+      const fs = window.FirebaseSesiones;
+      if(!fs){ mostrarToast('⚠ Firebase no disponible'); return; }
+      const id = await fs.guardarSesion(nombre);
+      cerrarModal('overlayGuardarSesion','modalGuardarSesion');
+      // Mostrar link
+      const link = `${location.origin}${location.pathname}?sesion=${id}`;
+      $('#linkSesionText').textContent = link;
+      abrirModal('overlayLinkSesion','modalLinkSesion');
+    } catch(e){
+      mostrarToast('❌ Error al guardar: ' + e.message);
+    } finally {
+      btn.disabled=false; btn.textContent='Guardar';
+    }
+  });
+
+  // ── Link compartido ──
+  $('#closeLinkSesion')?.addEventListener('click',  ()=>cerrarModal('overlayLinkSesion','modalLinkSesion'));
+  $('#closeLinkSesionOk')?.addEventListener('click',()=>cerrarModal('overlayLinkSesion','modalLinkSesion'));
+  $('#btnCopyLink')?.addEventListener('click', ()=>{
+    const txt = $('#linkSesionText').textContent;
+    navigator.clipboard.writeText(txt).then(()=>mostrarToast('✅ Link copiado'));
+  });
+
+  // ── Listar sesiones ──
+  $('#btnSesiones')?.addEventListener('click', async ()=>{
+    abrirModal('overlaySesiones','modalSesiones');
+    const lista = $('#sesionesLista');
+    lista.innerHTML = '<div class="sesiones-loading">Cargando...</div>';
+    try {
+      const fs = window.FirebaseSesiones;
+      if(!fs){ lista.innerHTML='<div class="sesiones-loading">Firebase no disponible todavía, esperá un segundo...</div>'; return; }
+      const sesiones = await fs.listarSesiones(30);
+      if(sesiones.length===0){
+        lista.innerHTML='<div class="sesiones-loading">No hay sesiones guardadas aún.</div>';
+        return;
+      }
+      lista.innerHTML = sesiones.map(s=>`
+        <div class="sesion-item" data-id="${s.id}">
+          <div class="sesion-info">
+            <span class="sesion-nombre">${s.nombre}</span>
+            <span class="sesion-meta">${s.fechaStr} · ${s.buques?.length||0} buque${s.buques?.length!==1?'s':''}</span>
+            <span class="sesion-buques">${(s.buques||[]).map(b=>`<span class="sesion-badge" style="border-color:${b.color}">${b.nombre}</span>`).join('')}</span>
+          </div>
+          <div class="sesion-acciones">
+            <button class="btn-sesion-cargar" data-id="${s.id}">Cargar</button>
+            <button class="btn-sesion-link"   data-id="${s.id}">🔗 Link</button>
+          </div>
+        </div>
+      `).join('');
+
+      // Eventos cargar
+      lista.querySelectorAll('.btn-sesion-cargar').forEach(btn=>{
+        btn.addEventListener('click', async ()=>{
+          btn.disabled=true; btn.textContent='Cargando...';
+          try {
+            const data = await window.FirebaseSesiones.cargarSesionPorId(btn.dataset.id);
+            cerrarModal('overlaySesiones','modalSesiones');
+            window.DockSim.cargarSnapshot(data);
+          } catch(e){ mostrarToast('❌ '+e.message); }
+          finally { btn.disabled=false; btn.textContent='Cargar'; }
+        });
+      });
+      // Eventos link
+      lista.querySelectorAll('.btn-sesion-link').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const link = `${location.origin}${location.pathname}?sesion=${btn.dataset.id}`;
+          navigator.clipboard.writeText(link).then(()=>mostrarToast('✅ Link copiado'));
+        });
+      });
+
+    } catch(e){
+      lista.innerHTML=`<div class="sesiones-loading">Error: ${e.message}</div>`;
+    }
+  });
+  $('#closeSesiones')?.addEventListener('click',  ()=>cerrarModal('overlaySesiones','modalSesiones'));
+  $('#cancelSesiones')?.addEventListener('click', ()=>cerrarModal('overlaySesiones','modalSesiones'));
+
+  // ── Cargar sesión desde URL ──
+  const urlId = new URLSearchParams(location.search).get('sesion');
+  if(urlId){
+    window.addEventListener('load', async ()=>{
+      // Esperar a que Firebase esté disponible (se carga como módulo)
+      let intentos=0;
+      const esperar = setInterval(async ()=>{
+        intentos++;
+        if(window.FirebaseSesiones || intentos>20){
+          clearInterval(esperar);
+          if(!window.FirebaseSesiones){ mostrarToast('⚠ Firebase no disponible'); return; }
+          try {
+            mostrarToast('⏳ Cargando sesión compartida...');
+            const data = await window.FirebaseSesiones.cargarSesionPorId(urlId);
+            window.DockSim.cargarSnapshot(data);
+          } catch(e){ mostrarToast('❌ Sesión no encontrada: '+urlId); }
+        }
+      }, 300);
+    });
+  }
+})();
+

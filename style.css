@@ -50,6 +50,36 @@ body { overflow: hidden; }
 .btn-print:hover { background:rgba(255,255,255,.28); transform:translateY(-1px); }
 .btn-config { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.3); color:#fff; border-radius:var(--radius-md); width:44px; height:44px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s,transform .1s; }
 .btn-config:hover { background:rgba(255,255,255,.28); transform:translateY(-1px); }
+.btn-sesiones, .btn-guardar-sesion { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.3); color:#fff; border-radius:var(--radius-md); width:44px; height:44px; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s,transform .1s; }
+.btn-sesiones:hover, .btn-guardar-sesion:hover { background:rgba(255,255,255,.28); transform:translateY(-1px); }
+
+/* Modal ancho para sesiones */
+.modal-wide { width:min(620px, 95vw) !important; }
+
+/* Hint text en modales */
+.sesion-hint { font-size:12px; color:var(--text2); font-family:var(--font-mono); line-height:1.5; }
+
+/* Link box */
+.link-box { display:flex; align-items:center; gap:10px; background:#f4fafd; border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; }
+.link-text { font-family:var(--font-mono); font-size:11px; color:var(--text); flex:1; word-break:break-all; }
+.btn-copy { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.btn-copy:hover { background:var(--accent-dark,#0099cc); }
+
+/* Lista de sesiones */
+.sesiones-loading { text-align:center; color:var(--text2); font-size:13px; font-family:var(--font-mono); padding:24px; }
+.sesion-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid var(--border); transition:background .12s; }
+.sesion-item:last-child { border-bottom:none; }
+.sesion-item:hover { background:#f4fafd; }
+.sesion-info { display:flex; flex-direction:column; gap:4px; flex:1; min-width:0; }
+.sesion-nombre { font-size:13px; font-weight:700; color:var(--text); }
+.sesion-meta { font-size:10px; color:var(--text2); font-family:var(--font-mono); }
+.sesion-buques { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+.sesion-badge { font-size:10px; font-weight:700; font-family:var(--font-mono); padding:2px 7px; border-radius:4px; border:2px solid; background:rgba(255,255,255,.6); color:#333; }
+.sesion-acciones { display:flex; gap:6px; flex-shrink:0; }
+.btn-sesion-cargar { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:11px; font-weight:700; cursor:pointer; }
+.btn-sesion-cargar:hover { opacity:.88; }
+.btn-sesion-link { background:#f0f0f0; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:11px; cursor:pointer; }
+.btn-sesion-link:hover { background:#e4f0f8; }
 
 /* ── Config toggles ── */
 .config-section-title { font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--text2); font-family:var(--font-mono); margin-bottom:10px; }
