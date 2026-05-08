@@ -277,10 +277,16 @@ body.ctrl-mode .buque:hover .buque-casco { outline:2px dashed rgba(255,255,255,.
 .bita-num-cell{font-weight:800} .bita-num-250{color:#a02020} .bita-num-150{color:var(--text)} .bita-num-55{color:var(--text3)}
 
 /* ============ OVERLAYS / MODALES ============ */
-.overlay { position:fixed; inset:0; background:rgba(8,35,60,.42); backdrop-filter:blur(4px); z-index:500; display:none; opacity:0; transition:opacity .2s; }
-.overlay.visible { display:block; opacity:1; }
-.modal { position:fixed; top:50%; left:50%; transform:translate(-50%,-46%) scale(.95); width:430px; max-width:calc(100vw - 32px); background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); z-index:600; display:none; opacity:0; transition:opacity .22s,transform .24s cubic-bezier(.22,1,.36,1); }
-.modal.visible { display:block; opacity:1; transform:translate(-50%,-50%) scale(1); }
+.overlay { position:fixed; inset:0; background:rgba(8,35,60,.42); backdrop-filter:blur(4px); z-index:500; display:none; opacity:0; transition:opacity .2s; pointer-events:none; }
+.overlay.visible { display:block; opacity:1; pointer-events:auto; }
+.modal { position:fixed; top:50%; left:50%; transform:translate(-50%,-46%) scale(.95); width:430px; max-width:calc(100vw - 32px); background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); z-index:600; display:none; opacity:0; transition:opacity .22s,transform .24s cubic-bezier(.22,1,.36,1); pointer-events:none; }
+.modal.visible { display:block; opacity:1; transform:translate(-50%,-50%) scale(1); pointer-events:auto; }
+/* Sesiones y Config van al fondo */
+#overlaySesiones, #overlayConfig { z-index:490; }
+#modalSesiones,   #modalConfig   { z-index:510; }
+/* Editar, Agregar y sub-modales van al frente */
+#overlayEditar,#overlayAgregar,#overlayConfirmBanda,#overlayGuardarSesion,#overlayLinkSesion { z-index:700; }
+#modalEditar,#modalAgregar,#modalConfirmBanda,#modalGuardarSesion,#modalLinkSesion { z-index:800; }
 .modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 22px 15px; border-bottom:1px solid var(--border); background:linear-gradient(135deg,#edfaf3 0%,#e4f4fc 100%); border-radius:var(--radius-lg) var(--radius-lg) 0 0; }
 .modal-title { font-size:19px; font-weight:800; letter-spacing:.04em; color:var(--text); }
 .modal-close { background:rgba(0,0,0,.06); border:none; color:var(--text2); font-size:15px; cursor:pointer; padding:5px 9px; border-radius:var(--radius-sm); }

@@ -1561,7 +1561,8 @@ window.DockSim = {
     return sesionesCache.filter(s=>{
       const okNombre = !filtroNombre ||
         s.nombre?.toLowerCase().includes(filtroNombre.toLowerCase()) ||
-        (s.buquesNombres||[]).some(n=>n.includes(filtroNombre.toLowerCase()));
+        (s.buquesNombres||[]).some(n=>n.includes(filtroNombre.toLowerCase())) ||
+        (s.buques||[]).some(b=>b.nombre?.toLowerCase().includes(filtroNombre.toLowerCase()));
       const okFecha = !filtroFecha || (s.fechaYMD && s.fechaYMD === filtroFecha);
       return okNombre && okFecha;
     });
