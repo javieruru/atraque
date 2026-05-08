@@ -285,7 +285,14 @@
         <button class="modal-close" id="closeSesiones">✕</button>
       </div>
       <div class="modal-body" style="padding-bottom:8px">
-        <input class="field-input sesion-buscador" type="search" id="sesion-buscar" placeholder="🔍  Buscar por nombre de buque, fecha..." autocomplete="off" />
+        <div class="sesion-filtros">
+          <input class="field-input" type="search" id="sesion-buscar-nombre"
+            placeholder="🔍 Buscar por nombre o buque..." autocomplete="off" />
+          <div class="sesion-fecha-wrap">
+            <input class="field-input" type="date" id="sesion-buscar-fecha" />
+            <button class="btn-limpiar-fecha" id="sesion-limpiar-fecha" title="Limpiar fecha">✕</button>
+          </div>
+        </div>
       </div>
       <div class="sesiones-lista" id="sesionesLista">
         <div class="sesiones-loading">Cargando sesiones...</div>

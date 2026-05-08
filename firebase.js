@@ -22,33 +22,31 @@ const db  = getFirestore(app);
 
 const PAGE_SIZE = 6;
 
-/* ─── Helpers ─── */
+/* ─── cursor interno — se guarda acá, nunca sale del módulo ─── */
+let _lastDoc = null;
+
 function generarId() {
   const now = new Date();
   const pad = n => String(n).padStart(2,'0');
   return `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 }
 
-function snapshotActual() {
-  return window.DockSim?.getSnapshot?.() ?? null;
-}
-
 /* ─── Guardar sesión ─── */
 async function guardarSesion(nombreSesion) {
-  const snapshot = snapshotActual();
+  const snapshot = window.DockSim?.getSnapshot?.();
   if (!snapshot) throw new Error('Sin datos');
   const id  = generarId();
   const now = new Date();
   const data = {
     id,
-    nombre:     nombreSesion || `Sesión ${now.toLocaleDateString('es-UY')} ${now.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'})}`,
-    fecha:      now.toISOString(),
-    fechaStr:   `${now.toLocaleDateString('es-UY')} ${now.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'})}`,
-    // índice de búsqueda: nombres de buques en minúsculas para filtrar client-side
+    nombre:        nombreSesion || `Sesión ${now.toLocaleDateString('es-UY')} ${now.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'})}`,
+    fecha:         now.toISOString(),
+    fechaStr:      `${now.toLocaleDateString('es-UY')} ${now.toLocaleTimeString('es-UY',{hour:'2-digit',minute:'2-digit'})}`,
+    fechaYMD:      `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`,
     buquesNombres: snapshot.buques.map(b => b.nombre.toLowerCase()),
-    buques:     snapshot.buques,
-    cabos:      snapshot.cabos,
-    contadores: snapshot.contadores
+    buques:        snapshot.buques,
+    cabos:         snapshot.cabos,
+    contadores:    snapshot.contadores
   };
   await setDoc(doc(db, 'sesiones', id), data);
   return id;
@@ -66,15 +64,25 @@ async function eliminarSesion(id) {
   await deleteDoc(doc(db, 'sesiones', id));
 }
 
-/* ─── Listar sesiones paginadas ─── */
-// lastDoc: último documento de la página anterior (para startAfter), null = primera página
-async function listarSesionesPaginadas(lastDoc = null) {
+/* ─── Primera página (resetea cursor) ─── */
+async function primeraPagina() {
+  _lastDoc = null;
+  return _traerPagina();
+}
+
+/* ─── Siguiente página (usa cursor interno) ─── */
+async function siguientePagina() {
+  if (!_lastDoc) return { sesiones: [], hayMas: false };
+  return _traerPagina();
+}
+
+async function _traerPagina() {
   let q = query(collection(db,'sesiones'), orderBy('fecha','desc'), limit(PAGE_SIZE));
-  if (lastDoc) q = query(collection(db,'sesiones'), orderBy('fecha','desc'), startAfter(lastDoc), limit(PAGE_SIZE));
+  if (_lastDoc) q = query(collection(db,'sesiones'), orderBy('fecha','desc'), startAfter(_lastDoc), limit(PAGE_SIZE));
   const snap = await getDocs(q);
+  _lastDoc = snap.docs[snap.docs.length - 1] ?? null;
   return {
     sesiones: snap.docs.map(d => d.data()),
-    lastDoc:  snap.docs[snap.docs.length - 1] ?? null,
     hayMas:   snap.docs.length === PAGE_SIZE
   };
 }
@@ -84,8 +92,9 @@ window.FirebaseSesiones = {
   guardarSesion,
   cargarSesionPorId,
   eliminarSesion,
-  listarSesionesPaginadas,
-  generarId,
+  primeraPagina,
+  siguientePagina,
   PAGE_SIZE
 };
+
 

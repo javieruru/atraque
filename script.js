@@ -1493,7 +1493,6 @@ window.DockSim = {
   });
   $('#closeGuardarSesion')?.addEventListener('click',  ()=>cerrarModal('overlayGuardarSesion','modalGuardarSesion'));
   $('#cancelGuardarSesion')?.addEventListener('click', ()=>cerrarModal('overlayGuardarSesion','modalGuardarSesion'));
-
   $('#confirmGuardarSesion')?.addEventListener('click', async ()=>{
     const nombre = $('#inp-nombre-sesion').value.trim();
     if(!nombre){ $('#inp-nombre-sesion').focus(); return; }
@@ -1507,11 +1506,8 @@ window.DockSim = {
       const link = `${location.origin}${location.pathname}?sesion=${id}`;
       $('#linkSesionText').textContent = link;
       abrirModal('overlayLinkSesion','modalLinkSesion');
-    } catch(e){
-      mostrarToast('❌ Error al guardar: ' + e.message);
-    } finally {
-      btn.disabled=false; btn.textContent='Guardar';
-    }
+    } catch(e){ mostrarToast('❌ Error al guardar: ' + e.message); }
+    finally { btn.disabled=false; btn.textContent='Guardar'; }
   });
 
   /* ── Link compartido ── */
@@ -1522,71 +1518,79 @@ window.DockSim = {
       .then(()=>mostrarToast('✅ Link copiado'));
   });
 
-  /* ── Listar sesiones con paginado + búsqueda ── */
-  let lastDoc      = null;
+  /* ── Listar sesiones ── */
   let hayMas       = false;
-  let filtroBusq   = '';
-  let sesionesCache = [];  // todas las traídas hasta ahora
+  let cargando     = false;
+  let sesionesCache = [];
+  let filtroNombre = '';
+  let filtroFecha  = '';
 
   async function cargarPagina(reset = false){
+    if(cargando) return;
     const fs = window.FirebaseSesiones;
-    if(!fs){ $('#sesionesLista').innerHTML='<div class="sesiones-loading">Firebase no disponible, esperá un segundo...</div>'; return; }
-
-    if(reset){ lastDoc=null; sesionesCache=[]; }
-
+    if(!fs){
+      $('#sesionesLista').innerHTML='<div class="sesiones-loading">Firebase no disponible, esperá...</div>';
+      return;
+    }
+    cargando = true;
     const btnMas = $('#btnCargarMas');
     if(btnMas){ btnMas.disabled=true; btnMas.textContent='Cargando...'; }
 
     try {
-      const res = await fs.listarSesionesPaginadas(reset ? null : lastDoc);
-      lastDoc  = res.lastDoc;
-      hayMas   = res.hayMas;
+      const res = reset
+        ? await fs.primeraPagina()
+        : await fs.siguientePagina();
+      if(reset) sesionesCache = [];
       sesionesCache = sesionesCache.concat(res.sesiones);
+      hayMas = res.hayMas;
       renderLista();
     } catch(e){
       $('#sesionesLista').innerHTML=`<div class="sesiones-loading">Error: ${e.message}</div>`;
+    } finally {
+      cargando = false;
     }
   }
 
+  function filtradas(){
+    return sesionesCache.filter(s=>{
+      const okNombre = !filtroNombre ||
+        s.nombre?.toLowerCase().includes(filtroNombre.toLowerCase()) ||
+        (s.buquesNombres||[]).some(n=>n.includes(filtroNombre.toLowerCase()));
+      const okFecha = !filtroFecha || (s.fechaYMD && s.fechaYMD === filtroFecha);
+      return okNombre && okFecha;
+    });
+  }
+
   function renderLista(){
-    const lista = $('#sesionesLista');
-    const busq  = filtroBusq.toLowerCase().trim();
+    const lista   = $('#sesionesLista');
+    const visible = filtradas();
 
-    const filtradas = busq
-      ? sesionesCache.filter(s =>
-          s.nombre?.toLowerCase().includes(busq) ||
-          s.fechaStr?.toLowerCase().includes(busq) ||
-          (s.buquesNombres||[]).some(n => n.includes(busq))
-        )
-      : sesionesCache;
-
-    if(filtradas.length === 0){
-      lista.innerHTML = '<div class="sesiones-loading">Sin resultados.</div>';
+    if(visible.length === 0 && !hayMas){
+      lista.innerHTML='<div class="sesiones-loading">Sin resultados.</div>';
       return;
     }
 
-    lista.innerHTML = filtradas.map(s=>`
+    lista.innerHTML = visible.map(s=>`
       <div class="sesion-item" data-id="${s.id}">
         <div class="sesion-info">
           <span class="sesion-nombre">${s.nombre}</span>
           <span class="sesion-meta">${s.fechaStr} · ${s.buques?.length||0} buque${s.buques?.length!==1?'s':''}</span>
-          <span class="sesion-buques">${(s.buques||[]).map(b=>`<span class="sesion-badge" style="border-color:${b.color}">${b.nombre}</span>`).join('')}</span>
+          <span class="sesion-buques">${(s.buques||[]).map(b=>`<span class="sesion-badge" style="border-color:${b.color};background:${b.color}22">${b.nombre}</span>`).join('')}</span>
         </div>
         <div class="sesion-acciones">
-          <button class="btn-sesion-cargar" data-id="${s.id}">Cargar</button>
-          <button class="btn-sesion-link"   data-id="${s.id}">🔗</button>
-          <button class="btn-sesion-eliminar" data-id="${s.id}" data-nombre="${s.nombre}">🗑</button>
+          <button class="btn-sesion-cargar"   data-id="${s.id}">Cargar</button>
+          <button class="btn-sesion-link"      data-id="${s.id}" title="Copiar link">🔗</button>
+          <button class="btn-sesion-eliminar"  data-id="${s.id}" data-nombre="${s.nombre}" title="Eliminar">🗑</button>
         </div>
-      </div>
-    `).join('');
+      </div>`).join('');
 
-    // Botón cargar más
-    if(hayMas && !busq){
-      lista.insertAdjacentHTML('beforeend',`<div class="sesiones-cargar-mas"><button id="btnCargarMas" class="btn-cargar-mas">Cargar más</button></div>`);
+    if(hayMas && !filtroNombre && !filtroFecha){
+      lista.insertAdjacentHTML('beforeend',
+        `<div class="sesiones-cargar-mas"><button id="btnCargarMas" class="btn-cargar-mas">Cargar más sesiones</button></div>`);
       $('#btnCargarMas')?.addEventListener('click', ()=>cargarPagina(false));
     }
 
-    // Eventos
+    // ── Eventos ──
     lista.querySelectorAll('.btn-sesion-cargar').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         btn.disabled=true; btn.textContent='...';
@@ -1601,23 +1605,21 @@ window.DockSim = {
 
     lista.querySelectorAll('.btn-sesion-link').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        const link = `${location.origin}${location.pathname}?sesion=${btn.dataset.id}`;
+        const link=`${location.origin}${location.pathname}?sesion=${btn.dataset.id}`;
         navigator.clipboard.writeText(link).then(()=>mostrarToast('✅ Link copiado'));
       });
     });
 
     lista.querySelectorAll('.btn-sesion-eliminar').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        const id     = btn.dataset.id;
-        const nombre = btn.dataset.nombre;
-        // Confirmación inline
-        const item = btn.closest('.sesion-item');
-        item.innerHTML = `
+        const id=btn.dataset.id, nombre=btn.dataset.nombre;
+        const item=btn.closest('.sesion-item');
+        item.innerHTML=`
           <div class="sesion-confirm-eliminar">
             <span>¿Eliminar <strong>${nombre}</strong>?</span>
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button class="btn-confirm-si btn-danger-sm" data-id="${id}">Sí, eliminar</button>
-              <button class="btn-confirm-no btn-cancel-sm">Cancelar</button>
+            <div class="sesion-confirm-btns">
+              <button class="btn-danger-sm  btn-confirm-si" data-id="${id}">Sí, eliminar</button>
+              <button class="btn-cancel-sm  btn-confirm-no">Cancelar</button>
             </div>
           </div>`;
         item.querySelector('.btn-confirm-no').addEventListener('click', renderLista);
@@ -1633,15 +1635,25 @@ window.DockSim = {
     });
   }
 
-  // Buscador
-  $('#sesion-buscar')?.addEventListener('input', e=>{
-    filtroBusq = e.target.value;
+  // Buscadores
+  $('#sesion-buscar-nombre')?.addEventListener('input', e=>{
+    filtroNombre = e.target.value.trim();
+    renderLista();
+  });
+  $('#sesion-buscar-fecha')?.addEventListener('change', e=>{
+    filtroFecha = e.target.value; // YYYY-MM-DD
+    renderLista();
+  });
+  $('#sesion-limpiar-fecha')?.addEventListener('click', ()=>{
+    $('#sesion-buscar-fecha').value='';
+    filtroFecha='';
     renderLista();
   });
 
   $('#btnSesiones')?.addEventListener('click', ()=>{
-    filtroBusq = ''; 
-    if($('#sesion-buscar')) $('#sesion-buscar').value='';
+    filtroNombre=''; filtroFecha='';
+    if($('#sesion-buscar-nombre')) $('#sesion-buscar-nombre').value='';
+    if($('#sesion-buscar-fecha'))  $('#sesion-buscar-fecha').value='';
     abrirModal('overlaySesiones','modalSesiones');
     cargarPagina(true);
   });
@@ -1668,5 +1680,6 @@ window.DockSim = {
     });
   }
 })();
+
 
 
