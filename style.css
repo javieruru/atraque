@@ -289,8 +289,9 @@ body.ctrl-mode .buque:hover .buque-casco { outline:2px dashed rgba(255,255,255,.
 .field-group { display:flex; flex-direction:column; gap:6px; }
 .field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .field-label { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--text2); font-family:var(--font-mono); }
-.field-input { background:#f2fafd; border:1.5px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:var(--font-main); font-size:15px; padding:10px 13px; width:100%; outline:none; transition:border-color .14s,box-shadow .14s; }
-.field-input:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(14,158,110,.12); }
+.field-input { background:#f2fafd; border:1.5px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:var(--font-main); font-size:15px; padding:10px 13px; width:100%; outline:none; transition:border-color .14s,box-shadow .14s; user-select:text; -webkit-user-select:text; }
+
+.modal input, .modal select, .modal textarea, .modal button { pointer-events:auto; user-select:text; -webkit-user-select:text; }
 .field-input::placeholder { color:var(--text3); }
 .field-segmented { display:flex; border:1.5px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; height:42px; }
 .seg-btn { flex:1; background:#f2fafd; color:var(--text2); border:none; border-right:1px solid var(--border); font-family:var(--font-main); font-size:13px; font-weight:700; cursor:pointer; transition:background .14s,color .14s; }
