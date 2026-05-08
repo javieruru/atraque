@@ -1471,7 +1471,7 @@ window.DockSim = {
    SESIONES — modales y lógica UI
 ============================================================ */
 (function initSesiones(){
-  // ── helpers modal ──
+
   function abrirModal(ovId, modId){
     const ov=$('#'+ovId), mo=$('#'+modId);
     ov.style.display='block'; mo.style.display='block';
@@ -1483,7 +1483,7 @@ window.DockSim = {
     setTimeout(()=>{ ov.style.display='none'; mo.style.display='none'; }, 230);
   }
 
-  // ── Guardar sesión ──
+  /* ── Guardar sesión ── */
   $('#btnGuardarSesion')?.addEventListener('click', ()=>{
     if(buques.length===0){ mostrarToast('⚠ No hay buques para guardar'); return; }
     const now = new Date();
@@ -1491,7 +1491,7 @@ window.DockSim = {
     abrirModal('overlayGuardarSesion','modalGuardarSesion');
     setTimeout(()=>$('#inp-nombre-sesion').focus(), 250);
   });
-  $('#closeGuardarSesion')?.addEventListener('click', ()=>cerrarModal('overlayGuardarSesion','modalGuardarSesion'));
+  $('#closeGuardarSesion')?.addEventListener('click',  ()=>cerrarModal('overlayGuardarSesion','modalGuardarSesion'));
   $('#cancelGuardarSesion')?.addEventListener('click', ()=>cerrarModal('overlayGuardarSesion','modalGuardarSesion'));
 
   $('#confirmGuardarSesion')?.addEventListener('click', async ()=>{
@@ -1504,7 +1504,6 @@ window.DockSim = {
       if(!fs){ mostrarToast('⚠ Firebase no disponible'); return; }
       const id = await fs.guardarSesion(nombre);
       cerrarModal('overlayGuardarSesion','modalGuardarSesion');
-      // Mostrar link
       const link = `${location.origin}${location.pathname}?sesion=${id}`;
       $('#linkSesionText').textContent = link;
       abrirModal('overlayLinkSesion','modalLinkSesion');
@@ -1515,73 +1514,144 @@ window.DockSim = {
     }
   });
 
-  // ── Link compartido ──
-  $('#closeLinkSesion')?.addEventListener('click',  ()=>cerrarModal('overlayLinkSesion','modalLinkSesion'));
-  $('#closeLinkSesionOk')?.addEventListener('click',()=>cerrarModal('overlayLinkSesion','modalLinkSesion'));
+  /* ── Link compartido ── */
+  $('#closeLinkSesion')?.addEventListener('click',   ()=>cerrarModal('overlayLinkSesion','modalLinkSesion'));
+  $('#closeLinkSesionOk')?.addEventListener('click', ()=>cerrarModal('overlayLinkSesion','modalLinkSesion'));
   $('#btnCopyLink')?.addEventListener('click', ()=>{
-    const txt = $('#linkSesionText').textContent;
-    navigator.clipboard.writeText(txt).then(()=>mostrarToast('✅ Link copiado'));
+    navigator.clipboard.writeText($('#linkSesionText').textContent)
+      .then(()=>mostrarToast('✅ Link copiado'));
   });
 
-  // ── Listar sesiones ──
-  $('#btnSesiones')?.addEventListener('click', async ()=>{
-    abrirModal('overlaySesiones','modalSesiones');
-    const lista = $('#sesionesLista');
-    lista.innerHTML = '<div class="sesiones-loading">Cargando...</div>';
+  /* ── Listar sesiones con paginado + búsqueda ── */
+  let lastDoc      = null;
+  let hayMas       = false;
+  let filtroBusq   = '';
+  let sesionesCache = [];  // todas las traídas hasta ahora
+
+  async function cargarPagina(reset = false){
+    const fs = window.FirebaseSesiones;
+    if(!fs){ $('#sesionesLista').innerHTML='<div class="sesiones-loading">Firebase no disponible, esperá un segundo...</div>'; return; }
+
+    if(reset){ lastDoc=null; sesionesCache=[]; }
+
+    const btnMas = $('#btnCargarMas');
+    if(btnMas){ btnMas.disabled=true; btnMas.textContent='Cargando...'; }
+
     try {
-      const fs = window.FirebaseSesiones;
-      if(!fs){ lista.innerHTML='<div class="sesiones-loading">Firebase no disponible todavía, esperá un segundo...</div>'; return; }
-      const sesiones = await fs.listarSesiones(30);
-      if(sesiones.length===0){
-        lista.innerHTML='<div class="sesiones-loading">No hay sesiones guardadas aún.</div>';
-        return;
-      }
-      lista.innerHTML = sesiones.map(s=>`
-        <div class="sesion-item" data-id="${s.id}">
-          <div class="sesion-info">
-            <span class="sesion-nombre">${s.nombre}</span>
-            <span class="sesion-meta">${s.fechaStr} · ${s.buques?.length||0} buque${s.buques?.length!==1?'s':''}</span>
-            <span class="sesion-buques">${(s.buques||[]).map(b=>`<span class="sesion-badge" style="border-color:${b.color}">${b.nombre}</span>`).join('')}</span>
-          </div>
-          <div class="sesion-acciones">
-            <button class="btn-sesion-cargar" data-id="${s.id}">Cargar</button>
-            <button class="btn-sesion-link"   data-id="${s.id}">🔗 Link</button>
-          </div>
-        </div>
-      `).join('');
-
-      // Eventos cargar
-      lista.querySelectorAll('.btn-sesion-cargar').forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          btn.disabled=true; btn.textContent='Cargando...';
-          try {
-            const data = await window.FirebaseSesiones.cargarSesionPorId(btn.dataset.id);
-            cerrarModal('overlaySesiones','modalSesiones');
-            window.DockSim.cargarSnapshot(data);
-          } catch(e){ mostrarToast('❌ '+e.message); }
-          finally { btn.disabled=false; btn.textContent='Cargar'; }
-        });
-      });
-      // Eventos link
-      lista.querySelectorAll('.btn-sesion-link').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const link = `${location.origin}${location.pathname}?sesion=${btn.dataset.id}`;
-          navigator.clipboard.writeText(link).then(()=>mostrarToast('✅ Link copiado'));
-        });
-      });
-
+      const res = await fs.listarSesionesPaginadas(reset ? null : lastDoc);
+      lastDoc  = res.lastDoc;
+      hayMas   = res.hayMas;
+      sesionesCache = sesionesCache.concat(res.sesiones);
+      renderLista();
     } catch(e){
-      lista.innerHTML=`<div class="sesiones-loading">Error: ${e.message}</div>`;
+      $('#sesionesLista').innerHTML=`<div class="sesiones-loading">Error: ${e.message}</div>`;
     }
+  }
+
+  function renderLista(){
+    const lista = $('#sesionesLista');
+    const busq  = filtroBusq.toLowerCase().trim();
+
+    const filtradas = busq
+      ? sesionesCache.filter(s =>
+          s.nombre?.toLowerCase().includes(busq) ||
+          s.fechaStr?.toLowerCase().includes(busq) ||
+          (s.buquesNombres||[]).some(n => n.includes(busq))
+        )
+      : sesionesCache;
+
+    if(filtradas.length === 0){
+      lista.innerHTML = '<div class="sesiones-loading">Sin resultados.</div>';
+      return;
+    }
+
+    lista.innerHTML = filtradas.map(s=>`
+      <div class="sesion-item" data-id="${s.id}">
+        <div class="sesion-info">
+          <span class="sesion-nombre">${s.nombre}</span>
+          <span class="sesion-meta">${s.fechaStr} · ${s.buques?.length||0} buque${s.buques?.length!==1?'s':''}</span>
+          <span class="sesion-buques">${(s.buques||[]).map(b=>`<span class="sesion-badge" style="border-color:${b.color}">${b.nombre}</span>`).join('')}</span>
+        </div>
+        <div class="sesion-acciones">
+          <button class="btn-sesion-cargar" data-id="${s.id}">Cargar</button>
+          <button class="btn-sesion-link"   data-id="${s.id}">🔗</button>
+          <button class="btn-sesion-eliminar" data-id="${s.id}" data-nombre="${s.nombre}">🗑</button>
+        </div>
+      </div>
+    `).join('');
+
+    // Botón cargar más
+    if(hayMas && !busq){
+      lista.insertAdjacentHTML('beforeend',`<div class="sesiones-cargar-mas"><button id="btnCargarMas" class="btn-cargar-mas">Cargar más</button></div>`);
+      $('#btnCargarMas')?.addEventListener('click', ()=>cargarPagina(false));
+    }
+
+    // Eventos
+    lista.querySelectorAll('.btn-sesion-cargar').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        btn.disabled=true; btn.textContent='...';
+        try {
+          const data = await window.FirebaseSesiones.cargarSesionPorId(btn.dataset.id);
+          cerrarModal('overlaySesiones','modalSesiones');
+          window.DockSim.cargarSnapshot(data);
+        } catch(e){ mostrarToast('❌ '+e.message); }
+        finally { btn.disabled=false; btn.textContent='Cargar'; }
+      });
+    });
+
+    lista.querySelectorAll('.btn-sesion-link').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const link = `${location.origin}${location.pathname}?sesion=${btn.dataset.id}`;
+        navigator.clipboard.writeText(link).then(()=>mostrarToast('✅ Link copiado'));
+      });
+    });
+
+    lista.querySelectorAll('.btn-sesion-eliminar').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id     = btn.dataset.id;
+        const nombre = btn.dataset.nombre;
+        // Confirmación inline
+        const item = btn.closest('.sesion-item');
+        item.innerHTML = `
+          <div class="sesion-confirm-eliminar">
+            <span>¿Eliminar <strong>${nombre}</strong>?</span>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn-confirm-si btn-danger-sm" data-id="${id}">Sí, eliminar</button>
+              <button class="btn-confirm-no btn-cancel-sm">Cancelar</button>
+            </div>
+          </div>`;
+        item.querySelector('.btn-confirm-no').addEventListener('click', renderLista);
+        item.querySelector('.btn-confirm-si').addEventListener('click', async ()=>{
+          try {
+            await window.FirebaseSesiones.eliminarSesion(id);
+            sesionesCache = sesionesCache.filter(s=>s.id!==id);
+            mostrarToast('🗑 Sesión eliminada');
+            renderLista();
+          } catch(e){ mostrarToast('❌ '+e.message); }
+        });
+      });
+    });
+  }
+
+  // Buscador
+  $('#sesion-buscar')?.addEventListener('input', e=>{
+    filtroBusq = e.target.value;
+    renderLista();
+  });
+
+  $('#btnSesiones')?.addEventListener('click', ()=>{
+    filtroBusq = ''; 
+    if($('#sesion-buscar')) $('#sesion-buscar').value='';
+    abrirModal('overlaySesiones','modalSesiones');
+    cargarPagina(true);
   });
   $('#closeSesiones')?.addEventListener('click',  ()=>cerrarModal('overlaySesiones','modalSesiones'));
   $('#cancelSesiones')?.addEventListener('click', ()=>cerrarModal('overlaySesiones','modalSesiones'));
 
-  // ── Cargar sesión desde URL ──
+  /* ── Cargar sesión desde URL ── */
   const urlId = new URLSearchParams(location.search).get('sesion');
   if(urlId){
-    window.addEventListener('load', async ()=>{
-      // Esperar a que Firebase esté disponible (se carga como módulo)
+    window.addEventListener('load', ()=>{
       let intentos=0;
       const esperar = setInterval(async ()=>{
         intentos++;
@@ -1598,4 +1668,5 @@ window.DockSim = {
     });
   }
 })();
+
 

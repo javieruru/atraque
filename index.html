@@ -284,10 +284,11 @@
         <h2 class="modal-title">📋 Sesiones guardadas</h2>
         <button class="modal-close" id="closeSesiones">✕</button>
       </div>
-      <div class="modal-body">
-        <div class="sesiones-lista" id="sesionesLista">
-          <div class="sesiones-loading">Cargando sesiones...</div>
-        </div>
+      <div class="modal-body" style="padding-bottom:8px">
+        <input class="field-input sesion-buscador" type="search" id="sesion-buscar" placeholder="🔍  Buscar por nombre de buque, fecha..." autocomplete="off" />
+      </div>
+      <div class="sesiones-lista" id="sesionesLista">
+        <div class="sesiones-loading">Cargando sesiones...</div>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" id="cancelSesiones">Cerrar</button>

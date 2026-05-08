@@ -54,7 +54,9 @@ body { overflow: hidden; }
 .btn-sesiones:hover, .btn-guardar-sesion:hover { background:rgba(255,255,255,.28); transform:translateY(-1px); }
 
 /* Modal ancho para sesiones */
-.modal-wide { width:min(620px, 95vw) !important; }
+.modal-wide { width:min(640px, 95vw) !important; max-height:75vh; display:flex; flex-direction:column; }
+.modal-wide .modal-body { flex-shrink:0; }
+.sesiones-lista { flex:1; overflow-y:auto; overflow-x:hidden; max-height:calc(75vh - 180px); scrollbar-width:thin; scrollbar-color:var(--border2) transparent; }
 
 /* Hint text en modales */
 .sesion-hint { font-size:12px; color:var(--text2); font-family:var(--font-mono); line-height:1.5; }
@@ -75,11 +77,27 @@ body { overflow: hidden; }
 .sesion-meta { font-size:10px; color:var(--text2); font-family:var(--font-mono); }
 .sesion-buques { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
 .sesion-badge { font-size:10px; font-weight:700; font-family:var(--font-mono); padding:2px 7px; border-radius:4px; border:2px solid; background:rgba(255,255,255,.6); color:#333; }
-.sesion-acciones { display:flex; gap:6px; flex-shrink:0; }
+.sesion-acciones { display:flex; gap:6px; flex-shrink:0; align-items:center; }
 .btn-sesion-cargar { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:11px; font-weight:700; cursor:pointer; }
 .btn-sesion-cargar:hover { opacity:.88; }
-.btn-sesion-link { background:#f0f0f0; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:11px; cursor:pointer; }
+.btn-sesion-link { background:#f0f0f0; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:13px; cursor:pointer; }
 .btn-sesion-link:hover { background:#e4f0f8; }
+.btn-sesion-eliminar { background:none; color:#cc3333; border:1px solid #f0c0c0; border-radius:6px; padding:6px 10px; font-size:13px; cursor:pointer; transition:background .12s; }
+.btn-sesion-eliminar:hover { background:#fff0f0; }
+
+/* Confirmación inline eliminar */
+.sesion-confirm-eliminar { padding:10px 14px; font-size:13px; color:var(--text); }
+.btn-danger-sm { background:#dc3545; color:#fff; border:none; border-radius:6px; padding:5px 12px; font-size:12px; font-weight:700; cursor:pointer; }
+.btn-cancel-sm { background:#eee; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:5px 12px; font-size:12px; cursor:pointer; }
+
+/* Buscador */
+.sesion-buscador { width:100%; margin-bottom:4px; }
+
+/* Cargar más */
+.sesiones-cargar-mas { text-align:center; padding:12px; border-top:1px solid var(--border); }
+.btn-cargar-mas { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:8px 24px; font-size:12px; font-weight:700; cursor:pointer; }
+.btn-cargar-mas:hover { opacity:.88; }
+.btn-cargar-mas:disabled { opacity:.5; cursor:default; }
 
 /* ── Config toggles ── */
 .config-section-title { font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--text2); font-family:var(--font-mono); margin-bottom:10px; }
